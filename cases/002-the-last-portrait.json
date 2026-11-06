@@ -1,0 +1,42 @@
+{
+  "id": "002",
+  "title": "The Last Portrait",
+  "victim": "Mr. Vance",
+  "level": "medium",
+  "rooms": [
+    { "id": "Stu", "name": "Study" },
+    { "id": "Gal", "name": "Gallery" },
+    { "id": "Bil", "name": "Billiard Room" },
+    { "id": "Pan", "name": "Pantry" }
+  ],
+  "doors": [["Stu", "Gal"], ["Gal", "Bil"], ["Bil", "Pan"]],
+  "suspects": [
+    { "id": "A", "name": "Agnes" },
+    { "id": "B", "name": "Basil" },
+    { "id": "C", "name": "Clara" },
+    { "id": "D", "name": "Doyle" }
+  ],
+  "times": ["21:00", "22:00", "23:00"],
+  "murder": { "room": "Gal", "time": "22:00" },
+  "clues": [
+    { "id": 1, "text": "The Gallery and the Billiard Room smell of polish, not onions. Doyle never set foot in either.",
+      "constraint": { "type": "notAt", "person": "D", "rooms": ["Gal", "Bil"] } },
+    { "id": 2, "text": "Clara was sketching in the Study at 23:00. Her sketchbook still lies open on the desk.",
+      "constraint": { "type": "at", "person": "C", "room": "Stu", "time": "23:00" } },
+    { "id": 3, "text": "Basil's oily boots never touched the Study's white carpet.",
+      "constraint": { "type": "notAt", "person": "B", "rooms": ["Stu"] } },
+    { "id": 4, "text": "At 23:00 Agnes was dusting the cue rack in the Billiard Room.",
+      "constraint": { "type": "at", "person": "A", "room": "Bil", "time": "23:00" } },
+    { "id": 5, "text": "Clara's tea went cold where she left it at 21:00. By 22:00 she was in a different room.",
+      "constraint": { "type": "moved", "person": "C", "from": "21:00" } }
+  ],
+  "solution": {
+    "A": ["Stu", "Gal", "Bil"],
+    "B": ["Bil", "Bil", "Gal"],
+    "C": ["Gal", "Stu", "Stu"],
+    "D": ["Pan", "Pan", "Pan"]
+  },
+  "controlQuestions": [
+    { "person": "B", "time": "23:00" }
+  ]
+}
