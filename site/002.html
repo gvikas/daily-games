@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Last Portrait</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Versjon 3: hele spillet på én mobilskjerm. Kart, timer og personer ligger fast; ledetrådene scroller i sitt eget felt; anklagen er et ark nederfra. */
+:root{
+  --bg:#EDF0F1; --surface:#FFFFFF; --ink:#15202A; --muted:#56636E; --line:#D2D9DE;
+  --green:#2E8654; --yellow:#C08E14; --red:#B04536; --on-mark:#FFFFFF;
+  --p-a:#9A5B2E; --p-b:#467A33; --p-c:#8E3F78; --p-d:#36598C; --on-token:#FFFFFF;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Instrument Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10161B; --surface:#172027; --ink:#E7ECEF; --muted:#96A3AD; --line:#29343D;
+  --green:#4DB47A; --yellow:#DDAE3C; --red:#E0796A; --on-mark:#10161B;
+  --p-a:#E0A06E; --p-b:#8CC775; --p-c:#D98CC4; --p-d:#86A9E0; --on-token:#10161B; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#10161B; --surface:#172027; --ink:#E7ECEF; --muted:#96A3AD; --line:#29343D;
+  --green:#4DB47A; --yellow:#DDAE3C; --red:#E0796A; --on-mark:#10161B;
+  --p-a:#E0A06E; --p-b:#8CC775; --p-c:#D98CC4; --p-d:#86A9E0; --on-token:#10161B; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;overflow:hidden;
+  -webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.1}
+p{margin:0}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+.app{height:100vh;height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:8px;
+  padding:max(8px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+
+/* Toppstripe */
+.top{display:flex;align-items:center;gap:10px;min-height:36px}
+.top h1{font-size:1.15rem;font-weight:800;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font:500 .78rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.icon{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font:700 1rem var(--f-display);cursor:pointer}
+
+/* Timer */
+.hours{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:3px;gap:3px}
+.hour{font:500 .85rem var(--f-mono);padding:7px 0;border:0;border-radius:7px;background:transparent;cursor:pointer}
+.hour[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.hour:disabled{cursor:default}
+
+/* Kart */
+.map{display:flex;justify-content:center;flex:0 0 auto}
+.map svg{display:block;width:100%;max-width:min(100%,44vh);max-width:min(100%,44dvh);height:auto;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.map svg *{pointer-events:none}
+.floor{fill:var(--surface)}
+.wall{stroke:var(--ink);stroke-width:5;stroke-linecap:square;fill:none}
+.door{stroke:var(--green);stroke-width:2;stroke-dasharray:3 3;fill:none}
+.rname{fill:var(--ink);font-family:var(--f-display);font-size:17px;font-weight:700}
+.small{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.body{stroke:var(--red);stroke-width:2;fill:none;transition:opacity .6s}
+.map .hit{pointer-events:all;fill:var(--surface);fill-opacity:0;cursor:pointer;transition:fill-opacity .2s}
+.hit.reach{fill:var(--green);fill-opacity:.16}
+.hit.dim{fill:var(--ink);fill-opacity:.08;cursor:not-allowed}
+.map .hit:focus,.map .mk:focus{outline:none}
+.hit:focus-visible{stroke:var(--green);stroke-width:3}
+.mk:focus-visible .dotc{stroke:var(--green);stroke-width:3}
+.map .mk{pointer-events:all;cursor:pointer}
+.mk .tap{fill:transparent}
+.mk .dotc{fill:var(--yellow)}
+.mk text{fill:var(--on-mark);font-family:var(--f-mono);font-size:12px;font-weight:500}
+.mk .ring{fill:none;stroke:var(--yellow);stroke-width:3;opacity:0}
+.mk.focus .ring{opacity:1;animation:pulse 1.2s ease-out infinite}
+@keyframes pulse{from{r:12;opacity:1}to{r:26;opacity:0}}
+.mk.used .dotc{fill:var(--muted)}
+.tok circle{stroke:var(--surface);stroke-width:3}
+.tok text{fill:var(--on-token);font-family:var(--f-display);font-size:20px;font-weight:800}
+.tok{transition:opacity .35s}
+.tok.sel circle{stroke:var(--ink);stroke-width:4}
+.trail{fill:none;stroke-width:3;stroke-dasharray:1 8;stroke-linecap:round;opacity:.8}
+.clockface circle{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+.clockface line{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.clockface text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.clockface.stopped circle{stroke:var(--red)}
+.clockface.stopped text{fill:var(--red)}
+
+/* Personer */
+.tray{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tbtn{display:flex;align-items:center;gap:5px;padding:4px 8px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-width:0;text-align:left}
+.tbtn .dot{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--on-token);font:800 .95rem var(--f-display)}
+.tbtn b{font-size:.9rem;font-weight:600}
+.tbtn[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.tbtn:disabled{opacity:.5;cursor:default}
+.caption{font:500 .78rem var(--f-mono);color:var(--muted);min-height:2.6em;line-height:1.3}
+
+/* Ledetråder */
+.clues{flex:1 1 0;min-height:72px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line);padding-top:6px;
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}
+.clues h2{font:500 .7rem var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:2px 0 6px}
+.clues ol{list-style:none;margin:0;padding:0 0 18px;display:flex;flex-direction:column;gap:6px}
+.clue{display:flex;gap:8px;align-items:flex-start;padding:8px 6px 8px 10px;border-radius:8px;border:1px solid transparent;background:var(--surface);font-size:.9rem;cursor:pointer;transition:background .2s,border-color .2s}
+.clue .n{font:500 .85rem var(--f-mono);color:var(--yellow);flex:0 0 auto;padding-top:1px}
+.clue .t{flex:1}
+.clue.focus{border-color:var(--yellow)}
+.clue.used{order:1;opacity:.5}
+.clue.used .t{text-decoration:line-through;text-decoration-thickness:1px}
+.done{flex:0 0 32px;height:32px;margin:-4px 0;border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:.85rem;color:var(--muted)}
+.clue.used .done{background:var(--green);border-color:var(--green);color:var(--on-mark)}
+
+/* Bunnknapp */
+.btn{font:600 1rem var(--f-body);padding:13px 18px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* Ark */
+dialog{border:0;padding:0;margin:auto auto 0;width:100%;max-width:480px;max-height:85dvh;border-radius:16px 16px 0 0;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(10,15,20,.45)}
+dialog[open]{animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet{display:flex;flex-direction:column;gap:14px;padding:20px max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+.sheet-head{display:flex;align-items:center;gap:10px}
+.sheet-head h2{flex:1;font-size:1.3rem;font-weight:800}
+.sheet ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+.q{font-size:.92rem;color:var(--muted)}
+.pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pick.rooms{grid-template-columns:1fr 1fr}
+.pbtn{font:600 .9rem var(--f-body);padding:10px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.pbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.msg{font-weight:600;min-height:1.4em}
+.share-text{font-family:var(--f-mono);font-size:.9rem;white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0;user-select:all}
+.row{display:flex;gap:8px}
+@media (max-height:700px){
+  .app{gap:6px}
+  .map svg{max-width:min(100%,38dvh)}
+  .hour{padding:5px 0}
+  .btn#openAcc{padding:10px 18px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <h1>The Last Portrait</h1>
+    <span class="status" id="status">0:00</span>
+    <button class="icon" type="button" id="helpBtn" aria-label="How to play">?</button>
+  </header>
+
+  <div class="hours" role="group" aria-label="Time">
+    <button class="hour" type="button" data-h="0" aria-pressed="true">21:00</button>
+    <button class="hour" type="button" data-h="1" aria-pressed="false">22:00</button>
+    <button class="hour" type="button" data-h="2" aria-pressed="false">23:00</button>
+  </div>
+
+  <div class="map">
+    <svg viewBox="14 14 372 372" aria-label="The house. Study top left, Gallery top right, Pantry bottom left, Billiard Room bottom right. Doors join Study and Gallery, Gallery and Billiard Room, Billiard Room and Pantry.">
+      <rect class="floor" x="20" y="20" width="360" height="360"/>
+      <rect class="hit" data-room="Stu" x="20" y="20" width="180" height="180" role="button" tabindex="0" aria-label="Study"/>
+      <rect class="hit" data-room="Gal" x="200" y="20" width="180" height="180" role="button" tabindex="0" aria-label="Gallery"/>
+      <rect class="hit" data-room="Pan" x="20" y="200" width="180" height="180" role="button" tabindex="0" aria-label="Pantry"/>
+      <rect class="hit" data-room="Bil" x="200" y="200" width="180" height="180" role="button" tabindex="0" aria-label="Billiard Room"/>
+      <g id="trails"></g>
+      <rect class="wall" x="20" y="20" width="360" height="360"/>
+      <line class="wall" x1="200" y1="20" x2="200" y2="90"/>
+      <line class="wall" x1="200" y1="130" x2="200" y2="270"/>
+      <line class="wall" x1="200" y1="310" x2="200" y2="380"/>
+      <line class="wall" x1="20" y1="200" x2="200" y2="200"/>
+      <line class="wall" x1="200" y1="200" x2="270" y2="200"/>
+      <line class="wall" x1="310" y1="200" x2="380" y2="200"/>
+      <path class="door" d="M200 90 A40 40 0 0 1 240 130"/>
+      <path class="door" d="M270 200 A40 40 0 0 0 310 240"/>
+      <path class="door" d="M200 310 A40 40 0 0 1 160 270"/>
+      <text class="rname" x="36" y="46">Study</text>
+      <text class="rname" x="216" y="46">Gallery</text>
+      <text class="rname" x="36" y="364">Pantry</text>
+      <text class="rname" x="216" y="364">Billiard Room</text>
+      <text class="small" x="36" y="186">no door to the Pantry</text>
+      <path id="body" class="body" d="M232 178 q-4 -18 4 -28 q10 -6 16 4 q4 14 -2 24 z"/>
+      <g id="clock" class="clockface stopped">
+        <circle cx="352" cy="60" r="14"/>
+        <line x1="352" y1="60" x2="352" y2="50"/>
+        <line x1="352" y1="60" x2="345" y2="60"/>
+        <text id="clockT" x="352" y="92" text-anchor="middle">22:00</text>
+      </g>
+      <g class="mk" data-c="2" role="button" tabindex="0" aria-label="Clue 2"><circle class="tap" cx="170" cy="62" r="20"/><circle class="ring" cx="170" cy="62" r="12"/><circle class="dotc" cx="170" cy="62" r="11"/><text x="170" y="66" text-anchor="middle">2</text></g>
+      <g class="mk" data-c="3" role="button" tabindex="0" aria-label="Clue 3"><circle class="tap" cx="52" cy="150" r="20"/><circle class="ring" cx="52" cy="150" r="12"/><circle class="dotc" cx="52" cy="150" r="11"/><text x="52" y="154" text-anchor="middle">3</text></g>
+      <g class="mk" data-c="4" role="button" tabindex="0" aria-label="Clue 4"><circle class="tap" cx="356" cy="352" r="20"/><circle class="ring" cx="356" cy="352" r="12"/><circle class="dotc" cx="356" cy="352" r="11"/><text x="356" y="356" text-anchor="middle">4</text></g>
+      <g id="tokens">
+        <g class="tok" data-p="A" style="opacity:0"><circle r="22" fill="var(--p-a)"/><text text-anchor="middle" y="7">A</text></g>
+        <g class="tok" data-p="B" style="opacity:0"><circle r="22" fill="var(--p-b)"/><text text-anchor="middle" y="7">B</text></g>
+        <g class="tok" data-p="C" style="opacity:0"><circle r="22" fill="var(--p-c)"/><text text-anchor="middle" y="7">C</text></g>
+        <g class="tok" data-p="D" style="opacity:0"><circle r="22" fill="var(--p-d)"/><text text-anchor="middle" y="7">D</text></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="tray" role="group" aria-label="Suspects">
+    <button class="tbtn" type="button" data-p="A" aria-pressed="false"><span class="dot" style="background:var(--p-a)">A</span><b>Agnes</b></button>
+    <button class="tbtn" type="button" data-p="B" aria-pressed="false"><span class="dot" style="background:var(--p-b)">B</span><b>Basil</b></button>
+    <button class="tbtn" type="button" data-p="C" aria-pressed="false"><span class="dot" style="background:var(--p-c)">C</span><b>Clara</b></button>
+    <button class="tbtn" type="button" data-p="D" aria-pressed="false"><span class="dot" style="background:var(--p-d)">D</span><b>Doyle</b></button>
+  </div>
+  <p class="caption" id="cap" aria-live="polite">Pick a person, then tap a room.</p>
+
+  <section class="clues" aria-label="Evidence">
+    <h2>Evidence · tap to find on the map</h2>
+    <ol id="clueList">
+      <li class="clue" data-c="1"><span class="n">1</span><span class="t">The Gallery and the Billiard Room smell of polish, not onions. Doyle never set foot in either.</span><button class="done" type="button" aria-label="Mark clue 1 as used" aria-pressed="false">✓</button></li>
+      <li class="clue" data-c="2"><span class="n">2</span><span class="t">Clara was sketching in the Study at 23:00. Her sketchbook still lies open on the desk.</span><button class="done" type="button" aria-label="Mark clue 2 as used" aria-pressed="false">✓</button></li>
+      <li class="clue" data-c="3"><span class="n">3</span><span class="t">Basil's oily boots never touched the Study's white carpet.</span><button class="done" type="button" aria-label="Mark clue 3 as used" aria-pressed="false">✓</button></li>
+      <li class="clue" data-c="4"><span class="n">4</span><span class="t">At 23:00 Agnes was dusting the cue rack in the Billiard Room.</span><button class="done" type="button" aria-label="Mark clue 4 as used" aria-pressed="false">✓</button></li>
+      <li class="clue" data-c="5"><span class="n">5</span><span class="t">Clara's tea went cold where she left it at 21:00. By 22:00 she was in a different room.</span><button class="done" type="button" aria-label="Mark clue 5 as used" aria-pressed="false">✓</button></li>
+    </ol>
+  </section>
+
+  <button class="btn" type="button" id="openAcc">Make your accusation</button>
+</main>
+
+<dialog id="help" aria-labelledby="helpTitle">
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="helpTitle">The night Mr. Vance died</h2><button class="icon" type="button" data-close aria-label="Close">✕</button></div>
+    <ul>
+      <li>After the row over the paintings, nobody would share a room.</li>
+      <li>The clock chimes every hour. Between chimes there is only time to walk through one door.</li>
+      <li>Mr. Vance died in the Gallery when the clock was knocked from the wall at 22:00. Whoever was there is the killer.</li>
+    </ul>
+    <p class="q"><b>Suspects:</b> Agnes the housekeeper, Basil the chauffeur, Clara the art student, Doyle the cook.</p>
+    <p class="q">Pick a person, then tap a room to place them. Green rooms are possible. Switch hours to watch everyone walk. When you know who did it, make your accusation.</p>
+    <button class="btn" type="button" data-close>Start</button>
+  </div>
+</dialog>
+
+<dialog id="acc" aria-labelledby="accTitle">
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="accTitle">Make your accusation</h2><button class="icon" type="button" data-close aria-label="Close">✕</button></div>
+    <div id="accForm" class="sheet" style="padding:0">
+      <span class="q">Who killed Mr. Vance?</span>
+      <div class="pick" id="pickS">
+        <button class="pbtn" type="button" data-v="A" aria-pressed="false">Agnes</button>
+        <button class="pbtn" type="button" data-v="B" aria-pressed="false">Basil</button>
+        <button class="pbtn" type="button" data-v="C" aria-pressed="false">Clara</button>
+        <button class="pbtn" type="button" data-v="D" aria-pressed="false">Doyle</button>
+      </div>
+      <span class="q">Prove it. Where was Basil at 23:00?</span>
+      <div class="pick rooms" id="pickR">
+        <button class="pbtn" type="button" data-v="Stu" aria-pressed="false">Study</button>
+        <button class="pbtn" type="button" data-v="Gal" aria-pressed="false">Gallery</button>
+        <button class="pbtn" type="button" data-v="Pan" aria-pressed="false">Pantry</button>
+        <button class="pbtn" type="button" data-v="Bil" aria-pressed="false">Billiard Room</button>
+      </div>
+      <button class="btn" type="button" id="accuse">Accuse</button>
+    </div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <div id="share" hidden class="sheet" style="padding:0">
+      <pre class="share-text" id="shareText"></pre>
+      <div class="row">
+        <button class="btn" type="button" id="copy">Copy result</button>
+        <button class="btn ghost" type="button" id="replayBtn">Replay the night</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  var P = ['A','B','C','D'], NM = { A:'Agnes', B:'Basil', C:'Clara', D:'Doyle' };
+  var RN = { Stu:'Study', Gal:'Gallery', Bil:'Billiard Room', Pan:'Pantry' };
+  var ADJ = { Stu:['Stu','Gal'], Gal:['Gal','Stu','Bil'], Bil:['Bil','Gal','Pan'], Pan:['Pan','Bil'] };
+  var CTR = { Stu:[110,118], Gal:[300,118], Pan:[110,290], Bil:[300,290] };
+  var DOOR = { 'Gal|Stu':[200,110], 'Bil|Gal':[290,200], 'Bil|Pan':[200,290] };
+  var COL = { A:'var(--p-a)', B:'var(--p-b)', C:'var(--p-c)', D:'var(--p-d)' };
+  var HRS = ['21:00','22:00','23:00'];
+  var SOLV = { A:['Stu','Gal','Bil'], B:['Bil','Bil','Gal'], C:['Gal','Stu','Stu'], D:['Pan','Pan','Pan'] };
+  var place = { A:[null,null,null], B:[null,null,null], C:[null,null,null], D:[null,null,null] };
+  var shown = { A:null, B:null, C:null, D:null };
+  var hour = 0, sel = null, busy = false, solved = false, strikes = 0, t0 = null, tmr = null, pickS = null, pickR = null;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS = 'http://www.w3.org/2000/svg';
+  var $ = function(id){ return document.getElementById(id); };
+  var tok = {}; P.forEach(function(p){ tok[p] = document.querySelector('.tok[data-p="'+p+'"]'); });
+  var hits = document.querySelectorAll('.map .hit');
+  var cap = $('cap'), msg = $('msg'), stat = $('status');
+  var trails = $('trails'), body = $('body'), clock = $('clock'), clockT = $('clockT');
+  var help = $('help'), acc = $('acc'), openAcc = $('openAcc');
+
+  // Ark
+  function open(d){ if (d.showModal) d.showModal(); else d.setAttribute('open',''); }
+  function close(d){ if (d.close) d.close(); else d.removeAttribute('open'); }
+  document.querySelectorAll('[data-close]').forEach(function(b){ b.addEventListener('click', function(){ close(b.closest('dialog')); }); });
+  [help, acc].forEach(function(d){ d.addEventListener('click', function(e){ if (e.target === d) close(d); }); });
+  $('helpBtn').addEventListener('click', function(){ open(help); });
+  openAcc.addEventListener('click', function(){ if (!busy || solved) open(acc); });
+  var seen = false; try { seen = localStorage.getItem('c002-help-seen') === '1'; localStorage.setItem('c002-help-seen','1'); } catch(e){}
+  if (!seen) open(help);
+
+  // Ledetråder knyttet til kartet
+  var marks = {}; document.querySelectorAll('.mk').forEach(function(m){ marks[m.dataset.c] = m; });
+  var clues = {}; document.querySelectorAll('.clue').forEach(function(c){ clues[c.dataset.c] = c; });
+  var focused = null;
+  function focus(n, scroll){
+    focused = (focused === n) ? null : n;
+    Object.keys(clues).forEach(function(k){ clues[k].classList.toggle('focus', k === focused); });
+    Object.keys(marks).forEach(function(k){ marks[k].classList.toggle('focus', k === focused); });
+    if (focused && scroll) clues[focused].scrollIntoView({ block:'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    if (focused && !marks[focused]) cap.textContent = 'Clue ' + focused + ' has no spot on the map.';
+  }
+  Object.keys(clues).forEach(function(k){
+    var c = clues[k], b = c.querySelector('.done');
+    c.addEventListener('click', function(e){ if (e.target === b) return; focus(k, false); });
+    b.addEventListener('click', function(){
+      var u = !c.classList.contains('used');
+      c.classList.toggle('used', u); b.setAttribute('aria-pressed', u ? 'true' : 'false');
+      if (marks[k]) marks[k].classList.toggle('used', u);
+      if (u && focused === k) focus(k, false);
+    });
+  });
+  Object.keys(marks).forEach(function(k){
+    var m = marks[k];
+    m.addEventListener('click', function(){ focus(k, true); });
+    m.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); focus(k, true); } });
+  });
+
+  // Spillogikk (som versjon 2)
+  function doorOf(a,b){ return DOOR[[a,b].sort().join('|')]; }
+  function route(a,b){ if (a === b) return [CTR[a]]; var d = doorOf(a,b); return d ? [CTR[a], d, CTR[b]] : [CTR[a], CTR[b]]; }
+  function at(pts, f){
+    if (pts.length === 1) return pts[0];
+    var seg = [], tot = 0, i;
+    for (i = 1; i < pts.length; i++){ var l = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); seg.push(l); tot += l; }
+    var d = f * tot;
+    for (i = 0; i < seg.length; i++){
+      if (d <= seg[i] || i === seg.length-1){ var k = seg[i] ? Math.min(d/seg[i],1) : 1; return [pts[i][0]+(pts[i+1][0]-pts[i][0])*k, pts[i][1]+(pts[i+1][1]-pts[i][1])*k]; }
+      d -= seg[i];
+    }
+    return pts[pts.length-1];
+  }
+  function put(p, xy, vis){ tok[p].setAttribute('transform', 'translate(' + xy[0] + ' ' + xy[1] + ')'); tok[p].style.opacity = vis ? 1 : 0; }
+  function occ(room, h){ for (var i = 0; i < 4; i++){ if (place[P[i]][h] === room) return P[i]; } return null; }
+  function check(p, room, h){
+    var o = occ(room, h); if (o && o !== p) return 'occupied';
+    var pr = h > 0 ? place[p][h-1] : null, nx = h < 2 ? place[p][h+1] : null;
+    if (pr && ADJ[pr].indexOf(room) < 0) return 'far';
+    if (nx && ADJ[nx].indexOf(room) < 0) return 'far';
+    return 'ok';
+  }
+  function fmt(s){ var m = Math.floor(s/60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+  function secs(){ return t0 ? Math.floor((Date.now()-t0)/1000) : 0; }
+  function tick(){ stat.textContent = fmt(secs()) + (strikes ? ' · ' + '🟥'.repeat(strikes) : ''); }
+  function startT(){ if (!t0 && !solved){ t0 = Date.now(); tmr = setInterval(tick, 1000); } }
+
+  function drawTrails(){
+    while (trails.firstChild) trails.removeChild(trails.firstChild);
+    if (hour === 0) return;
+    P.forEach(function(p){
+      var a = place[p][hour-1], b = place[p][hour];
+      if (!a || !b || a === b) return;
+      var pl = document.createElementNS(NS, 'polyline');
+      pl.setAttribute('class', 'trail');
+      pl.setAttribute('points', route(a,b).map(function(q){ return q.join(','); }).join(' '));
+      pl.setAttribute('stroke', COL[p]);
+      trails.appendChild(pl);
+    });
+  }
+  function ui(){
+    document.querySelectorAll('.hour').forEach(function(b){ b.setAttribute('aria-pressed', +b.dataset.h === hour ? 'true' : 'false'); b.disabled = busy; });
+    document.querySelectorAll('.tbtn').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.p === sel ? 'true' : 'false'); b.disabled = busy || solved; });
+    P.forEach(function(p){ tok[p].classList.toggle('sel', p === sel); });
+    hits.forEach(function(r){
+      var room = r.dataset.room, o = occ(room, hour);
+      r.classList.remove('reach','dim');
+      r.setAttribute('aria-label', RN[room] + ' at ' + HRS[hour] + ': ' + (o ? NM[o] : 'empty'));
+      if (sel && !busy && !solved){ r.classList.add(check(sel, room, hour) === 'ok' ? 'reach' : 'dim'); }
+    });
+  }
+  function still(){
+    P.forEach(function(p){ var r = place[p][hour]; shown[p] = r; if (r) put(p, CTR[r], true); else tok[p].style.opacity = 0; });
+    drawTrails(); ui();
+  }
+  function walk(to, done){
+    var plans = {};
+    P.forEach(function(p){ var a = shown[p], b = place[p][to]; plans[p] = { a:a, b:b, pts: (a && b) ? route(a,b) : null }; });
+    hour = to;
+    while (trails.firstChild) trails.removeChild(trails.firstChild);
+    var finish = function(){ still(); if (done) done(); };
+    if (reduce){ finish(); return; }
+    P.forEach(function(p){ var pl = plans[p]; if (!pl.a && pl.b) put(p, CTR[pl.b], false); if (pl.a && !pl.b) tok[p].style.opacity = 0; });
+    var dur = 1100, s = null;
+    function step(ts){
+      if (s === null) s = ts;
+      var f = Math.min((ts - s)/dur, 1), e = f < .5 ? 2*f*f : 1 - Math.pow(-2*f+2, 2)/2;
+      P.forEach(function(p){ var pl = plans[p]; if (pl.pts) put(p, at(pl.pts, e), true); else if (!pl.a && pl.b && f > .5) put(p, CTR[pl.b], true); });
+      if (f < 1) requestAnimationFrame(step); else finish();
+    }
+    requestAnimationFrame(step);
+  }
+
+  document.querySelectorAll('.tbtn').forEach(function(b){
+    b.addEventListener('click', function(){ if (busy || solved) return; sel = (sel === b.dataset.p) ? null : b.dataset.p; cap.textContent = sel ? 'Where was ' + NM[sel] + ' at ' + HRS[hour] + '? Green rooms are possible.' : 'Pick a person, then tap a room.'; ui(); });
+  });
+  function tapRoom(room){
+    if (busy || solved) return;
+    startT();
+    if (!sel){ var o = occ(room, hour); if (o){ sel = o; cap.textContent = NM[o] + ' selected. Tap another room to move, or the same room to remove.'; ui(); } else cap.textContent = 'Pick a person first.'; return; }
+    if (place[sel][hour] === room){ place[sel][hour] = null; cap.textContent = NM[sel] + ' removed from ' + RN[room] + '.'; sel = null; still(); return; }
+    var st = check(sel, room, hour);
+    if (st === 'occupied'){ cap.textContent = RN[room] + ' is taken at ' + HRS[hour] + '. Nobody would share a room.'; return; }
+    if (st === 'far'){ cap.textContent = NM[sel] + ' can’t get to the ' + RN[room] + ' in one hour. Only one door per chime.'; return; }
+    place[sel][hour] = room; cap.textContent = NM[sel] + ' in the ' + RN[room] + ' at ' + HRS[hour] + '.'; sel = null; still();
+  }
+  hits.forEach(function(r){
+    r.addEventListener('click', function(){ tapRoom(r.dataset.room); });
+    r.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tapRoom(r.dataset.room); } });
+  });
+  document.querySelectorAll('.hour').forEach(function(b){
+    b.addEventListener('click', function(){
+      var h = +b.dataset.h; if (busy || h === hour) return;
+      busy = true; sel = null; ui();
+      walk(h, function(){ busy = false; cap.textContent = HRS[hour] + '.'; ui(); });
+    });
+  });
+  function picker(id, set){
+    var bs = document.querySelectorAll('#' + id + ' .pbtn');
+    bs.forEach(function(b){ b.addEventListener('click', function(){ if (solved) return; set(b.dataset.v); bs.forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); }); });
+  }
+  picker('pickS', function(v){ pickS = v; });
+  picker('pickR', function(v){ pickR = v; });
+
+  function replay(){
+    busy = true; sel = null; openAcc.disabled = true;
+    P.forEach(function(p){ place[p] = SOLV[p].slice(); });
+    hour = 0; still(); ui();
+    body.style.opacity = 0; clock.classList.remove('stopped'); clockT.textContent = '21:00';
+    cap.textContent = '21:00 · Clara shows Mr. Vance her sketches in the Gallery.';
+    setTimeout(function(){
+      cap.textContent = 'Clara slips into the Study. Agnes passes her in the doorway, heading for the Gallery.';
+      walk(1, function(){
+        clock.classList.add('stopped'); clockT.textContent = '22:00'; body.style.opacity = 1;
+        cap.textContent = '22:00 · The clock crashes to the floor. Mr. Vance is dead, and Agnes is alone with him.';
+        busy = true; ui();
+        setTimeout(function(){
+          cap.textContent = 'Agnes slips into the Billiard Room as Basil walks the other way.';
+          walk(2, function(){ cap.textContent = '23:00 · Basil finds the body and shouts for help.'; busy = false; openAcc.disabled = false; ui(); });
+        }, 2600);
+      });
+    }, 1400);
+  }
+  $('accuse').addEventListener('click', function(){
+    if (solved || busy) return;
+    startT();
+    if (!pickS || !pickR){ msg.textContent = 'Choose a suspect and say where Basil was at 23:00.'; return; }
+    if (pickS === 'A' && pickR === 'Gal'){
+      solved = true; clearInterval(tmr); tick();
+      msg.textContent = 'Case closed. Agnes was alone with Mr. Vance when the clock fell.';
+      $('accForm').hidden = true;
+      var res = ''; for (var i = 0; i < strikes; i++) res += '🟥'; res += '🟩';
+      $('shareText').textContent = 'The Last Portrait · Case #002\n⏱ ' + fmt(secs()) + '\n' + res;
+      $('share').hidden = false;
+      openAcc.textContent = 'Your result';
+      setTimeout(function(){ close(acc); replay(); }, 1200);
+    } else {
+      strikes++; tick();
+      msg.textContent = 'That doesn’t hold up. Strike ' + strikes + '.';
+    }
+  });
+  $('replayBtn').addEventListener('click', function(){ if (busy) return; close(acc); replay(); });
+  $('copy').addEventListener('click', function(){
+    var el = $('shareText'), t = el.textContent, btn = this;
+    function selc(){ var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected, copy manually'; }
+    try { navigator.clipboard.writeText(t).then(function(){ btn.textContent = 'Copied'; }, selc); } catch(e){ selc(); }
+  });
+  still();
+})();
+</script>
+</body>
+</html>
