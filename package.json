@@ -1,0 +1,11 @@
+{
+  "name": "daily-games",
+  "private": true,
+  "type": "module",
+  "description": "Case format, rules engine and solver for the daily deduction game.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "solve": "node scripts/solve.js",
+    "test": "node --test \"test/*.test.js\""
+  }
+}

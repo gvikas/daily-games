@@ -6,6 +6,10 @@ A daily deduction game with a murder-mystery theme (working title). Reconstruct 
 
 - `site/` – the playable game, published to GitHub Pages on every push to `main`
 - `.github/workflows/pages.yml` – the deploy workflow
+- `engine/` – rules, validation and solver (plain JavaScript, no dependencies)
+- `cases/` – cases as JSON
+- `scripts/solve.js` – checks a case: `npm run solve cases/001-the-stopped-clock.json`
+- `test/` – `npm test`
 
 ## Run locally
 

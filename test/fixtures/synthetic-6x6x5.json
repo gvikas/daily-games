@@ -1,0 +1,248 @@
+{
+  "id": "S1",
+  "title": "Synthetic 6x6x5",
+  "victim": "Lord Test",
+  "rooms": [
+    {
+      "id": "Hal",
+      "name": "Hall"
+    },
+    {
+      "id": "Din",
+      "name": "Dining Room"
+    },
+    {
+      "id": "Stu",
+      "name": "Study"
+    },
+    {
+      "id": "Gal",
+      "name": "Gallery"
+    },
+    {
+      "id": "Ver",
+      "name": "Veranda"
+    },
+    {
+      "id": "Cel",
+      "name": "Cellar"
+    }
+  ],
+  "doors": [
+    [
+      "Hal",
+      "Din"
+    ],
+    [
+      "Hal",
+      "Stu"
+    ],
+    [
+      "Hal",
+      "Gal"
+    ],
+    [
+      "Gal",
+      "Ver"
+    ],
+    [
+      "Din",
+      "Cel"
+    ],
+    [
+      "Stu",
+      "Gal"
+    ]
+  ],
+  "suspects": [
+    {
+      "id": "A",
+      "name": "Agnes"
+    },
+    {
+      "id": "B",
+      "name": "Basil"
+    },
+    {
+      "id": "C",
+      "name": "Clara"
+    },
+    {
+      "id": "D",
+      "name": "Desmond"
+    },
+    {
+      "id": "E",
+      "name": "Edith"
+    },
+    {
+      "id": "F",
+      "name": "Felix"
+    }
+  ],
+  "times": [
+    "20:00",
+    "21:00",
+    "22:00",
+    "23:00",
+    "00:00"
+  ],
+  "murder": {
+    "room": "Hal",
+    "time": "22:00"
+  },
+  "clues": [
+    {
+      "id": 1,
+      "text": "Synthetic clue 1.",
+      "constraint": {
+        "type": "notAt",
+        "person": "A",
+        "rooms": [
+          "Din",
+          "Stu",
+          "Ver"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "text": "Synthetic clue 2.",
+      "constraint": {
+        "type": "at",
+        "person": "B",
+        "room": "Cel",
+        "time": "21:00"
+      }
+    },
+    {
+      "id": 3,
+      "text": "Synthetic clue 3.",
+      "constraint": {
+        "type": "moved",
+        "person": "B",
+        "from": "20:00"
+      }
+    },
+    {
+      "id": 4,
+      "text": "Synthetic clue 4.",
+      "constraint": {
+        "type": "stayed",
+        "person": "B",
+        "from": "22:00"
+      }
+    },
+    {
+      "id": 5,
+      "text": "Synthetic clue 5.",
+      "constraint": {
+        "type": "at",
+        "person": "E",
+        "room": "Hal",
+        "time": "23:00"
+      }
+    },
+    {
+      "id": 6,
+      "text": "Synthetic clue 6.",
+      "constraint": {
+        "type": "moved",
+        "person": "D",
+        "from": "20:00"
+      }
+    },
+    {
+      "id": 7,
+      "text": "Synthetic clue 7.",
+      "constraint": {
+        "type": "swap",
+        "a": "E",
+        "b": "F",
+        "from": "23:00"
+      }
+    },
+    {
+      "id": 8,
+      "text": "Synthetic clue 8.",
+      "constraint": {
+        "type": "at",
+        "person": "C",
+        "room": "Stu",
+        "time": "22:00"
+      }
+    },
+    {
+      "id": 9,
+      "text": "Synthetic clue 9.",
+      "constraint": {
+        "type": "notAt",
+        "person": "E",
+        "rooms": [
+          "Stu",
+          "Cel"
+        ],
+        "time": "20:00"
+      }
+    },
+    {
+      "id": 10,
+      "text": "Synthetic clue 10.",
+      "constraint": {
+        "type": "stayed",
+        "person": "E",
+        "from": "21:00"
+      }
+    }
+  ],
+  "solution": {
+    "A": [
+      "Hal",
+      "Hal",
+      "Hal",
+      "Gal",
+      "Gal"
+    ],
+    "B": [
+      "Din",
+      "Cel",
+      "Cel",
+      "Cel",
+      "Cel"
+    ],
+    "C": [
+      "Stu",
+      "Stu",
+      "Stu",
+      "Stu",
+      "Stu"
+    ],
+    "D": [
+      "Gal",
+      "Ver",
+      "Ver",
+      "Ver",
+      "Ver"
+    ],
+    "E": [
+      "Ver",
+      "Gal",
+      "Gal",
+      "Hal",
+      "Din"
+    ],
+    "F": [
+      "Cel",
+      "Din",
+      "Din",
+      "Din",
+      "Hal"
+    ]
+  },
+  "controlQuestions": [
+    {
+      "person": "B",
+      "time": "22:00"
+    }
+  ]
+}

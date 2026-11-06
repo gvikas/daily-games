@@ -23,10 +23,16 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - `docs/playtest.md`: testfunn, som går tilbake til sparring
 
 ## Stack
-Ikke bestemt ennå. Når den er valgt, før den inn i `decisions.md` og her.
+- Motor (regler, validering og solver): Node ≥ 20, ren ESM-JavaScript uten eksterne avhengigheter. Tester med `node:test`.
+- `engine/` bruker ingen Node-API-er, slik at den kan importeres i nettleseren senere. Fil-I/O og CLI ligger i `scripts/`.
+- Frontend er ikke bestemt. `site/` er fortsatt statiske HTML-prototyper med egne hardkodede data.
+
+## Saker og solver
+- Saker ligger som JSON i `cases/<id>-<slug>.json`. Formatet er beskrevet i `docs/specs/done/001-case-format-and-solver.md`.
+- Kjør `npm run solve <fil>` etter hver endring i en sak. Exit-kode 0 betyr gyldig, nøyaktig én løsning og lik fasiten. `--json` gir rapporten som JSON.
+- `npm test` kjører alle tester. Nye ledetrådtyper skal ha egne tester.
 
 ## Arbeidsflyt
 - Research og sparring skjer i Claude Cowork og skrives til `docs/`.
 - Utvikling skjer i Claude Code og tar utgangspunkt i en spec.
 - Når en implementering avviker fra specen, oppdater specen eller noter det i `decisions.md`.
-- `concept.md` og `decisions.md` speiles til Daily Games-prosjektet på claude.ai, slik at chatter der har kontekst. Endres de her, må speilet oppdateres i neste Cowork-økt.

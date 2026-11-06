@@ -1,0 +1,40 @@
+{
+  "id": "001",
+  "title": "The Stopped Clock",
+  "victim": "Mr. Harlow",
+  "rooms": [
+    { "id": "Con", "name": "Conservatory" },
+    { "id": "Lib", "name": "Library" },
+    { "id": "Lou", "name": "Lounge" },
+    { "id": "Kit", "name": "Kitchen" }
+  ],
+  "doors": [["Con", "Lib"], ["Lib", "Lou"], ["Lou", "Kit"]],
+  "suspects": [
+    { "id": "A", "name": "Ada" },
+    { "id": "B", "name": "Bram" },
+    { "id": "C", "name": "Cora" },
+    { "id": "D", "name": "Dex" }
+  ],
+  "times": ["22:00", "23:00", "00:00"],
+  "murder": { "room": "Lib", "time": "23:00" },
+  "clues": [
+    { "id": 2, "text": "Bram's pruning shears lie by the body. He found Mr. Harlow at midnight.",
+      "constraint": { "type": "at", "person": "B", "room": "Lib", "time": "00:00" } },
+    { "id": 3, "text": "The dishwater is still warm. Dex was washing up in the Kitchen at midnight.",
+      "constraint": { "type": "at", "person": "D", "room": "Kit", "time": "00:00" } },
+    { "id": 4, "text": "Ada's floury footprints never reach the Library or the Conservatory.",
+      "constraint": { "type": "notAt", "person": "A", "rooms": ["Lib", "Con"] } },
+    { "id": 5, "text": "A thread from Cora's shawl and a button from Dex's waistcoat hang on the same doorframe. At 22:30 they squeezed past each other and swapped rooms.",
+      "constraint": { "type": "swap", "a": "C", "b": "D", "from": "22:00" } }
+  ],
+  "solution": {
+    "A": ["Kit", "Kit", "Lou"],
+    "B": ["Con", "Con", "Lib"],
+    "C": ["Lou", "Lib", "Con"],
+    "D": ["Lib", "Lou", "Kit"]
+  },
+  "controlQuestions": [
+    { "person": "D", "time": "23:00" },
+    { "person": "C", "time": "22:00", "forAccused": "C" }
+  ]
+}
