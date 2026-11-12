@@ -1,0 +1,42 @@
+{
+  "id": "003",
+  "title": "The Silent Encore",
+  "victim": "Madame Orlov",
+  "level": "medium",
+  "rooms": [
+    { "id": "Par", "name": "Parlour" },
+    { "id": "Mus", "name": "Music Room" },
+    { "id": "Din", "name": "Dining Room" },
+    { "id": "Scu", "name": "Scullery" }
+  ],
+  "doors": [["Par", "Mus"], ["Mus", "Din"], ["Din", "Scu"]],
+  "suspects": [
+    { "id": "A", "name": "Alma" },
+    { "id": "B", "name": "Bruno" },
+    { "id": "C", "name": "Celia" },
+    { "id": "D", "name": "Dmitri" }
+  ],
+  "times": ["21:00", "22:00", "23:00"],
+  "murder": { "room": "Mus", "time": "22:00" },
+  "clues": [
+    { "id": 1, "text": "Celia was turning pages for Madame Orlov in the Music Room at 21:00.",
+      "constraint": { "type": "at", "person": "C", "room": "Mus", "time": "21:00" } },
+    { "id": 2, "text": "At 23:00 Bruno was in the Music Room. He found the body.",
+      "constraint": { "type": "at", "person": "B", "room": "Mus", "time": "23:00" } },
+    { "id": 3, "text": "Bruno was not invited to dinner. He never entered the Dining Room.",
+      "constraint": { "type": "notAt", "person": "B", "rooms": ["Din"] } },
+    { "id": 4, "text": "Dmitri lets no pupil into his Scullery. Alma never set foot there.",
+      "constraint": { "type": "notAt", "person": "A", "rooms": ["Scu"] } },
+    { "id": 5, "text": "Dmitri's kettle boiled dry. Between 22:00 and 23:00 he changed rooms.",
+      "constraint": { "type": "moved", "person": "D", "from": "22:00" } }
+  ],
+  "solution": {
+    "A": ["Din", "Mus", "Par"],
+    "B": ["Par", "Par", "Mus"],
+    "C": ["Mus", "Din", "Scu"],
+    "D": ["Scu", "Scu", "Din"]
+  },
+  "controlQuestions": [
+    { "person": "C", "time": "23:00" }
+  ]
+}
