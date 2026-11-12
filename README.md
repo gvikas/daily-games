@@ -7,8 +7,11 @@ A daily deduction game with a murder-mystery theme (working title). Reconstruct 
 - `site/` – the playable game, published to GitHub Pages on every push to `main`
 - `.github/workflows/pages.yml` – the deploy workflow
 - `engine/` – rules, validation and solver (plain JavaScript, no dependencies)
+- `site/play.html?case=<id>` – the game page. It reads the case and its floor plan from JSON and draws the map
 - `cases/` – cases as JSON
-- `scripts/solve.js` – checks a case: `npm run solve cases/001-the-stopped-clock.json`
+- `floorplans/` – houses as rectangles on a grid, with doors
+- `scripts/solve.js` – checks a case: `npm run solve cases/003-the-silent-encore.json`
+- `scripts/publish-case.js` – copies a checked case into `site/`: `npm run publish-case 003 2026-11-12`
 - `test/` – `npm test`
 
 ## Run locally

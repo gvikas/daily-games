@@ -25,12 +25,27 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 ## Stack
 - Motor (regler, validering og solver): Node ≥ 20, ren ESM-JavaScript uten eksterne avhengigheter. Tester med `node:test`.
 - `engine/` bruker ingen Node-API-er, slik at den kan importeres i nettleseren senere. Fil-I/O og CLI ligger i `scripts/`.
-- Frontend er ikke bestemt. `site/` er fortsatt statiske HTML-prototyper med egne hardkodede data.
+- Spillsiden er `site/play.html?case=<id>`: statisk HTML og JavaScript uten byggesteg. Den leser saken og plantegningen fra JSON og tegner kartet selv. Rammeverk for frontend er ikke valgt.
+- `site/002.html` og `site/v3.html` er eldre prototyper med hardkodede data. De skal stå urørt.
 
 ## Saker og solver
 - Saker ligger som JSON i `cases/<id>-<slug>.json`. Formatet er beskrevet i `docs/specs/done/001-case-format-and-solver.md`.
 - Kjør `npm run solve <fil>` etter hver endring i en sak. Exit-kode 0 betyr gyldig, nøyaktig én løsning og lik fasiten. `--json` gir rapporten som JSON.
 - `npm test` kjører alle tester. Nye ledetrådtyper skal ha egne tester.
+- En sak som skal kunne spilles, har `floorplan` og presentasjonsfeltene (`intro`, `lead`, `hint`, `marker`, `ending`, `share`). Formatet er beskrevet i `docs/specs/done/006-data-driven-case-page.md`. `npm run solve` sjekker også disse feltene.
+- Saker med id som starter på `test-`, er testsaker for hus og størrelser. De skal ikke inn i `site/cases/index.json`.
+
+## Plantegninger
+- Hus ligger i `floorplans/<id>.json` som rektangler på et rutenett med dører. Ingen koordinater skrives for hånd: vegger, dører, romsentre og markører regnes ut i `engine/floorplan.js`.
+- `engine/floorplan.js` skal ikke importere noe. Den kopieres til `site/lib/floorplan.js`, og en test feiler hvis kopien er utdatert.
+
+## Publisere en sak
+GitHub Pages publiserer bare `site/`. Filene i `site/cases/`, `site/floorplans/` og `site/lib/` er kopier og skal ikke redigeres for hånd.
+1. `npm run solve cases/<id>-<slug>.json` skal gi exit-kode 0.
+2. `npm run publish-case <id> <ÅÅÅÅ-MM-DD>` validerer saken, kopierer den, plantegningen og `engine/floorplan.js` til `site/`, og fører saken inn i `site/cases/index.json` på den datoen. `site/index.html` åpner da saken den dagen, uten at noen URL endres for hånd.
+3. Uten dato kopieres saken uten å bli ført opp. Den kan åpnes med `play.html?case=<id>`.
+4. Kjør `npm run publish-case <id>` på nytt etter endringer i en publisert sak, en plantegning eller `engine/floorplan.js`. `npm test` sier fra hvis kopiene er utdaterte.
+5. Ikke publiser en sak før dagen den gjelder. Fasiten ligger i JSON-filen og er offentlig så snart den er pushet.
 
 ## Arbeidsflyt
 - Research og sparring skjer i Claude Cowork og skrives til `docs/`.
