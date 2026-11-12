@@ -1,0 +1,83 @@
+{
+  "id": "test-five",
+  "title": "The Long Night",
+  "victim": "Colonel Marsh",
+  "level": "test",
+  "floorplan": "hall-5",
+  "rooms": [
+    { "id": "Lib", "name": "Library", "short": "Library", "slot": "n" },
+    { "id": "Kit", "name": "Kitchen", "short": "Kitchen", "slot": "w" },
+    { "id": "Hal", "name": "Hall", "short": "Hall", "slot": "c" },
+    { "id": "Stu", "name": "Study", "short": "Study", "slot": "e" },
+    { "id": "Cel", "name": "Cellar", "short": "Cellar", "slot": "s" }
+  ],
+  "doors": [["Hal", "Lib"], ["Hal", "Kit"], ["Hal", "Stu"], ["Hal", "Cel"]],
+  "suspects": [
+    { "id": "A", "name": "Agnes", "role": "the nurse" },
+    { "id": "B", "name": "Bertram", "role": "the gardener" },
+    { "id": "C", "name": "Clement", "role": "the chaplain" },
+    { "id": "D", "name": "Daphne", "role": "the daughter" },
+    { "id": "E", "name": "Ernest", "role": "the solicitor" }
+  ],
+  "times": ["20:00", "21:00", "22:00", "23:00"],
+  "murder": { "room": "Lib", "time": "21:00", "device": "the long-case clock was pushed over" },
+  "intro": [
+    { "h": "Colonel Marsh is dead.",
+      "t": "He died in the Library at 21:00, when the long-case clock was pushed over. Whoever was in that room at 21:00 is the killer." },
+    { "h": "Five people were in the house.",
+      "t": "Agnes the nurse, Bertram the gardener, Clement the chaplain, Daphne the daughter and Ernest the solicitor. After the reading of the will nobody would share a room. Five people, five rooms: every room was taken at every hour." },
+    { "h": "The clock chimes every hour.",
+      "t": "Between chimes there is only time to walk through one door, or to stay put. Every door opens on the Hall. Rebuild the night hour by hour, and find out who was in the Library at 21:00." }
+  ],
+  "reasons": {
+    "occupied": "After the reading of the will, nobody would share a room.",
+    "far": "There is only time for one door per chime."
+  },
+  "clues": [
+    { "id": 1, "lead": "There is fresh soil on the cellar steps.",
+      "text": "Bertram was fetching seed potatoes from the Cellar at 20:00.",
+      "hint": "Tap Bertram, then tap the Cellar.", "marker": "Cel",
+      "constraint": { "type": "at", "person": "B", "room": "Cel", "time": "20:00" } },
+    { "id": 2, "lead": "Daphne's candle was carried off.",
+      "text": "Between 20:00 and 21:00 Daphne changed rooms.",
+      "hint": "Daphne moved between 20:00 and 21:00. Every door opens on the Hall.",
+      "constraint": { "type": "moved", "person": "D", "from": "20:00" } },
+    { "id": 3, "lead": "The night nurse was relieved at last.",
+      "text": "Between 22:00 and 23:00, Agnes and Bertram swapped rooms.",
+      "hint": "They traded places through one door, so one of them was in the Hall.", "marker": "Hal",
+      "constraint": { "type": "swap", "a": "A", "b": "B", "from": "22:00" } },
+    { "id": 4, "lead": "The chaplain's prayer book lies open in two places.",
+      "text": "Between 21:00 and 22:00 Clement changed rooms.",
+      "hint": "Clement moved between 21:00 and 22:00. Only one door per chime.",
+      "constraint": { "type": "moved", "person": "C", "from": "21:00" } },
+    { "id": 5, "lead": "Clement was not welcome near the Colonel's papers.",
+      "text": "He never set foot in the Library or the Study.",
+      "hint": "Nothing to place yet. Which rooms are left for Clement?", "marker": "Stu",
+      "constraint": { "type": "notAt", "person": "C", "rooms": ["Lib", "Stu"] } },
+    { "id": 6, "lead": "Bertram's boots are caked with mud.",
+      "text": "He never set foot in the Kitchen or the Study.",
+      "hint": "Five people, five rooms. So where could Bertram have been?", "marker": "Kit",
+      "constraint": { "type": "notAt", "person": "B", "rooms": ["Kit", "Stu"] } }
+  ],
+  "solution": {
+    "A": ["Lib", "Lib", "Lib", "Hal"],
+    "B": ["Cel", "Cel", "Hal", "Lib"],
+    "C": ["Kit", "Hal", "Cel", "Cel"],
+    "D": ["Hal", "Kit", "Kit", "Kit"],
+    "E": ["Stu", "Stu", "Stu", "Stu"]
+  },
+  "controlQuestions": [
+    { "person": "C", "time": "22:00" }
+  ],
+  "ending": [
+    "20:00 · Agnes sits with the Colonel in the Library. Daphne paces the Hall, Clement warms himself in the Kitchen, Bertram is down in the Cellar, and Ernest reads the will in the Study.",
+    "Daphne goes to the Kitchen for tea. Clement steps out into the Hall to make room.",
+    "21:00 · “You were never his nurse.” The long-case clock is pushed over. Colonel Marsh is dead, and Agnes is alone with him.",
+    "Clement goes down to the Cellar as Bertram comes up into the Hall.",
+    "22:00 · The house is quiet. Agnes waits in the Library with the door shut.",
+    "Agnes slips out into the Hall as Bertram walks into the Library.",
+    "23:00 · Bertram finds the Colonel and shouts for help."
+  ],
+  "closing": "Agnes was alone with Colonel Marsh when the clock fell.",
+  "share": { "title": "The Long Night", "number": "T2" }
+}

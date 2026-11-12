@@ -187,10 +187,18 @@ a{color:inherit}
 .msg:empty{display:none}
 .share-text{font-family:var(--f-mono);font-size:.9rem;white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0;user-select:all}
 
+/* Flere enn fire mistenkte: chipene går over to rader og notatene får flere linjer, så kartet gir fra seg litt plass. */
+.app.big .map svg{max-width:min(100%,calc(36vh * var(--ar)));max-width:min(100%,calc(36dvh * var(--ar)))}
+.app.big[data-mode="accuse"] .map svg{max-width:min(100%,calc(29vh * var(--ar)));max-width:min(100%,calc(29dvh * var(--ar)))}
+.app.big .nc{padding:2px}
+.app.big .clues{min-height:40px}
+
 @media (max-height:700px){
   .app{gap:6px}
   .map svg{max-width:min(100%,calc(38dvh * var(--ar)))}
   .app[data-mode="accuse"] .map svg{max-width:min(100%,calc(28dvh * var(--ar)))}
+  .app.big .map svg{max-width:min(100%,calc(32dvh * var(--ar)))}
+  .app.big[data-mode="accuse"] .map svg{max-width:min(100%,calc(24dvh * var(--ar)))}
   .hour{padding:5px 0}
   .btn#openAcc{padding:9px 18px}
   #pAcc .btn{padding:9px 12px}
@@ -397,6 +405,8 @@ function start(c, plan){
   root.setProperty('--tray-cols', NP <= 4 ? NP : 3);
   root.setProperty('--pick-s', NP <= 4 ? NP : 3);
   root.setProperty('--pick-r', ROOMS.length <= 4 ? ROOMS.length : 3);
+
+  app.classList.toggle('big', NP > 4);
 
   var svg = $('svg');
   svg.setAttribute('viewBox', lay.viewBox.join(' '));

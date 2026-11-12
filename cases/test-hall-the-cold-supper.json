@@ -1,0 +1,74 @@
+{
+  "id": "test-hall",
+  "title": "The Cold Supper",
+  "victim": "Lady Wren",
+  "level": "test",
+  "floorplan": "hall-5",
+  "rooms": [
+    { "id": "Lib", "name": "Library", "short": "Library", "slot": "n" },
+    { "id": "Kit", "name": "Kitchen", "short": "Kitchen", "slot": "w" },
+    { "id": "Hal", "name": "Hall", "short": "Hall", "slot": "c" },
+    { "id": "Stu", "name": "Study", "short": "Study", "slot": "e" },
+    { "id": "Cel", "name": "Cellar", "short": "Cellar", "slot": "s" }
+  ],
+  "doors": [["Hal", "Lib"], ["Hal", "Kit"], ["Hal", "Stu"], ["Hal", "Cel"]],
+  "suspects": [
+    { "id": "A", "name": "Arthur", "role": "the nephew" },
+    { "id": "B", "name": "Beatrice", "role": "the cook" },
+    { "id": "C", "name": "Cecil", "role": "the butler" },
+    { "id": "D", "name": "Dora", "role": "the secretary" }
+  ],
+  "times": ["20:00", "21:00", "22:00"],
+  "murder": { "room": "Stu", "time": "21:00", "device": "the carriage clock was swept off the desk" },
+  "intro": [
+    { "h": "Lady Wren is dead.",
+      "t": "She died in the Study at 21:00, when the carriage clock was swept off the desk. Whoever was in that room at 21:00 is the killer." },
+    { "h": "Four people were in the house.",
+      "t": "Arthur the nephew, Beatrice the cook, Cecil the butler and Dora the secretary. After the row over the will nobody would share a room. Four people, five rooms: one room stood empty at every hour." },
+    { "h": "The clock chimes every hour.",
+      "t": "Between chimes there is only time to walk through one door, or to stay put. Every door opens on the Hall. Rebuild the night hour by hour, and find out who was in the Study at 21:00." }
+  ],
+  "reasons": {
+    "occupied": "After the row over the will, nobody would share a room.",
+    "far": "There is only time for one door per chime."
+  },
+  "clues": [
+    { "id": 1, "lead": "Supper went out at eight.",
+      "text": "Beatrice was plating supper in the Kitchen at 20:00.",
+      "hint": "Tap Beatrice, then tap the Kitchen.", "marker": "Kit",
+      "constraint": { "type": "at", "person": "B", "room": "Kit", "time": "20:00" } },
+    { "id": 2, "lead": "The stove was left to go cold.",
+      "text": "Between 21:00 and 22:00 Beatrice changed rooms.",
+      "hint": "Beatrice moved between 21:00 and 22:00. Every door opens on the Hall.", "marker": "Hal",
+      "constraint": { "type": "moved", "person": "B", "from": "21:00" } },
+    { "id": 3, "lead": "A letter lies half typed.",
+      "text": "Between 21:00 and 22:00 Dora changed rooms.",
+      "hint": "Dora moved in the same hour as Beatrice. Only one of them can be in the Hall.",
+      "constraint": { "type": "moved", "person": "D", "from": "21:00" } },
+    { "id": 4, "lead": "Dora cannot stand onions or damp.",
+      "text": "She never set foot in the Kitchen or the Cellar.",
+      "hint": "Nothing to place yet. Which rooms are left for Dora?", "marker": "Cel",
+      "constraint": { "type": "notAt", "person": "D", "rooms": ["Cel", "Kit"] } },
+    { "id": 5, "lead": "Two people brushed past each other in a doorway.",
+      "text": "Between 20:00 and 21:00, Arthur and Dora swapped rooms.",
+      "hint": "They traded places through one door. Every door opens on the Hall, so one of them started there.", "marker": "Stu",
+      "constraint": { "type": "swap", "a": "A", "b": "D", "from": "20:00" } }
+  ],
+  "solution": {
+    "A": ["Hal", "Stu", "Stu"],
+    "B": ["Kit", "Kit", "Hal"],
+    "C": ["Cel", "Cel", "Cel"],
+    "D": ["Stu", "Hal", "Lib"]
+  },
+  "controlQuestions": [
+    { "person": "D", "time": "22:00" }
+  ],
+  "ending": [
+    "20:00 · Dora takes dictation from Lady Wren in the Study. Arthur waits in the Hall, Beatrice plates supper, and Cecil counts bottles in the Cellar.",
+    "Dora is sent out. Arthur passes her in the doorway.",
+    "21:00 · “You will not see a penny.” The carriage clock is swept off the desk. Lady Wren is dead, and Arthur is alone with her.",
+    "Dora goes to the Library for a book. Beatrice comes out of the Kitchen into the Hall.",
+    "22:00 · Beatrice knocks on the Study door. Arthur opens it, white as a sheet."
+  ],
+  "share": { "title": "The Cold Supper", "number": "T1" }
+}

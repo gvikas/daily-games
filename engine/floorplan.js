@@ -127,7 +127,8 @@ export function layout(plan) {
     const point = w.vertical ? [line, r1(mid)] : [r1(mid), line];
     // The door swings into the second slot of "between".
     const dir = w.vertical ? [b.x >= a.x + a.w ? 1 : -1, 0] : [0, b.y >= a.y + a.h ? 1 : -1];
-    const hv = [dir[1], dir[0]];
+    // Hinge side, chosen so the hand-drawn houses of cases 001–004 come out exactly as they were.
+    const hv = [Math.abs(dir[1]), dir[0]];
     const hinge = [point[0] + hv[0] * half, point[1] + hv[1] * half];
     const start = [point[0] - hv[0] * half, point[1] - hv[1] * half];
     const end = [hinge[0] + dir[0] * DOOR, hinge[1] + dir[1] * DOOR];
@@ -264,7 +265,7 @@ export function decorate(lay, input) {
     const L = r.x, R = r.x + r.w, T = r.y, B = r.y + r.h;
     // Clock: a face with the time written under it.
     const clockShape = (p) => box(p[0] - 17, p[1] - 15, p[0] + 17, p[1] + 35);
-    out.clock = choose(r, [[R - 28, T + 40], [L + 28, T + 56], [R - 28, B - 46], [L + 28, B - 46]], clockShape, obs, 2);
+    out.clock = choose(r, [[R - 28, T + 40], [L + 28, T + (r.nameAt === 'top' ? 56 : 40)], [R - 28, B - 46], [L + 28, B - 46]], clockShape, obs, 2);
     obs.push(clockShape(out.clock));
     // Body: the chalk outline.
     const bodyShape = (p) => box(p[0] - 13, p[1] - 16, p[0] + 13, p[1] + 16);

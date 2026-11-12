@@ -1,0 +1,207 @@
+{
+  "id": "004",
+  "title": "The Last Hand",
+  "victim": "Mr. Holm",
+  "level": "medium",
+  "floorplan": "ring-2x2",
+  "rooms": [
+    {
+      "id": "Bar",
+      "name": "Bar",
+      "short": "Bar",
+      "slot": "nw"
+    },
+    {
+      "id": "Sau",
+      "name": "Sauna",
+      "short": "Sauna",
+      "slot": "ne"
+    },
+    {
+      "id": "Ski",
+      "name": "Ski Room",
+      "short": "Ski",
+      "slot": "se"
+    },
+    {
+      "id": "Car",
+      "name": "Card Room",
+      "short": "Card",
+      "slot": "sw"
+    }
+  ],
+  "doors": [
+    [
+      "Bar",
+      "Sau"
+    ],
+    [
+      "Sau",
+      "Ski"
+    ],
+    [
+      "Ski",
+      "Car"
+    ],
+    [
+      "Car",
+      "Bar"
+    ]
+  ],
+  "suspects": [
+    {
+      "id": "A",
+      "name": "Astrid",
+      "role": "the ski guide"
+    },
+    {
+      "id": "B",
+      "name": "Birger",
+      "role": "the sauna keeper"
+    },
+    {
+      "id": "C",
+      "name": "Conrad",
+      "role": "the bookkeeper"
+    },
+    {
+      "id": "D",
+      "name": "Dagny",
+      "role": "the barmaid"
+    }
+  ],
+  "times": [
+    "21:00",
+    "22:00",
+    "23:00"
+  ],
+  "murder": {
+    "room": "Car",
+    "time": "22:00",
+    "device": "the cuckoo clock was torn from the wall"
+  },
+  "intro": [
+    {
+      "h": "Mr. Holm is dead.",
+      "t": "He died in the Card Room at 22:00, when the cuckoo clock was torn from the wall. Whoever was in that room at 22:00 is the killer."
+    },
+    {
+      "h": "Four people were snowed in at the lodge.",
+      "t": "Astrid the ski guide, Birger the sauna keeper, Conrad the bookkeeper and Dagny the barmaid. After the row over the accounts nobody would share a room. Four people, four rooms: every room was taken at every hour."
+    },
+    {
+      "h": "The clock chimes every hour.",
+      "t": "Between chimes there is only time to walk through one door, or to stay put. The lodge is built in a ring, so every room has two doors. Rebuild the night hour by hour, and find out who was in the Card Room at 22:00."
+    }
+  ],
+  "reasons": {
+    "occupied": "After the quarrel, nobody would share a room.",
+    "far": "There is only time for one door per chime."
+  },
+  "clues": [
+    {
+      "id": 1,
+      "lead": "The till roll is stamped 21:00.",
+      "text": "Dagny was polishing glasses in the Bar at 21:00.",
+      "hint": "Tap Dagny, then tap the Bar.",
+      "marker": "Bar",
+      "constraint": {
+        "type": "at",
+        "person": "D",
+        "room": "Bar",
+        "time": "21:00"
+      }
+    },
+    {
+      "id": 2,
+      "lead": "Birger hates the cold rooms.",
+      "text": "He never set foot in the Ski Room or the Card Room.",
+      "hint": "Nothing to place yet. Which rooms are left for Birger?",
+      "constraint": {
+        "type": "notAt",
+        "person": "B",
+        "rooms": [
+          "Ski",
+          "Car"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "lead": "The sauna stones were still hot.",
+      "text": "At 23:00 Birger was in the Sauna, ladling water on the stones.",
+      "hint": "Switch to 23:00 and place Birger. Then think back: where could he have been at 21:00?",
+      "marker": "Sau",
+      "constraint": {
+        "type": "at",
+        "person": "B",
+        "room": "Sau",
+        "time": "23:00"
+      }
+    },
+    {
+      "id": 4,
+      "lead": "Two trails of wet footprints cross in a doorway.",
+      "text": "Between 21:00 and 22:00, Astrid and Conrad swapped rooms.",
+      "hint": "They traded places through one door. Which two rooms were still free at 21:00?",
+      "constraint": {
+        "type": "swap",
+        "a": "A",
+        "b": "C",
+        "from": "21:00"
+      }
+    },
+    {
+      "id": 5,
+      "lead": "A tray of drinks was set down in a hurry.",
+      "text": "Between 22:00 and 23:00, Conrad and Dagny swapped rooms.",
+      "hint": "Conrad and Dagny traded through one door. Which doors join the rooms they could have been in?",
+      "constraint": {
+        "type": "swap",
+        "a": "C",
+        "b": "D",
+        "from": "22:00"
+      }
+    }
+  ],
+  "solution": {
+    "A": [
+      "Car",
+      "Ski",
+      "Ski"
+    ],
+    "B": [
+      "Sau",
+      "Sau",
+      "Sau"
+    ],
+    "C": [
+      "Ski",
+      "Car",
+      "Bar"
+    ],
+    "D": [
+      "Bar",
+      "Bar",
+      "Car"
+    ]
+  },
+  "controlQuestions": [
+    {
+      "person": "A",
+      "time": "23:00"
+    }
+  ],
+  "ending": [
+    "21:00 · Astrid plays cards with Mr. Holm. Conrad waxes skis, Dagny minds the Bar, and Birger stokes the sauna.",
+    "Astrid leaves the table for the Ski Room. Conrad passes her in the doorway.",
+    "22:00 · “You have been cooking the books.” The cuckoo clock is torn from the wall. Mr. Holm is dead, and Conrad is alone with him.",
+    "Conrad slips into the Bar as Dagny carries a tray of drinks into the Card Room.",
+    "23:00 · Dagny drops the tray and screams."
+  ],
+  "closing": "Conrad was alone with Mr. Holm when the clock fell.",
+  "share": {
+    "title": "The Last Hand",
+    "number": "004"
+  }
+}
