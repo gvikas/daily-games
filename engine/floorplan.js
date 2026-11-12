@@ -299,7 +299,7 @@ export function decorate(lay, input) {
     const top = T + 30, bottom = B - 28;
     const topL = T + (r.nameAt === 'top' ? 56 : 30), bottomL = B - (r.nameAt === 'bottom' ? 54 : 28);
     const shape = (p) => ({ cx: p[0], cy: p[1], r: MARKER_R + 2 });
-    const spot = choose(r, [[R - 28, bottom], [L + 30, topL], [R - 28, top], [L + 30, bottomL], [R - 28, cy], [L + 30, cy], [cx, top], [cx, bottom]], shape, obs, 1);
+    const spot = choose(r, [[L + 30, topL], [R - 28, bottom], [R - 28, top], [L + 30, bottomL], [R - 28, cy], [L + 30, cy], [cx, top], [cx, bottom]], shape, obs, 1);
     out.markers[m.id] = [r1(spot[0]), r1(spot[1])];
     obs.push(shape(spot));
   }

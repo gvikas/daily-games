@@ -3,9 +3,12 @@
   "private": true,
   "type": "module",
   "description": "Case format, rules engine and solver for the daily deduction game.",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "solve": "node scripts/solve.js",
+    "publish-case": "node scripts/publish-case.js",
     "test": "node --test \"test/*.test.js\""
   }
 }
