@@ -4,17 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Daily Games</title>
-<!-- Today's case. Change both URLs below when a new case goes live. -->
-<meta http-equiv="refresh" content="0; url=003.html">
-<script>location.replace('003.html' + location.search);</script>
 <style>
 :root{--bg:#EDF0F1;--ink:#15202A}
 @media (prefers-color-scheme: dark){:root{--bg:#10161B;--ink:#E7ECEF}}
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;text-align:center;padding:16px}
 a{color:inherit}
 </style>
 </head>
 <body>
-<p><a href="003.html">Open today's case</a></p>
+<p id="msg">Opening today’s case…</p>
+<script>
+// Opens today's case: the newest entry in cases/index.json dated today or earlier, by the visitor's own date.
+// Cases are added with `npm run publish-case <id> <date>`. Nothing here is edited by hand.
+(function(){
+  var msg = document.getElementById('msg');
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  var d = new Date(), today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  fetch('cases/index.json', { cache: 'no-cache' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(list){
+      var pick = null;
+      (Array.isArray(list) ? list : []).forEach(function(e){
+        if (e && typeof e.date === 'string' && typeof e.case === 'string' && e.date <= today && (!pick || e.date > pick.date)) pick = e;
+      });
+      if (!pick){ msg.textContent = 'There is no case yet. Come back tomorrow.'; return; }
+      location.replace('play.html?case=' + encodeURIComponent(pick.case));
+    })
+    .catch(function(){ msg.textContent = 'Today’s case could not be opened. Try again in a moment.'; });
+})();
+</script>
 </body>
 </html>
