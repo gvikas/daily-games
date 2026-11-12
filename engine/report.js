@@ -2,6 +2,7 @@
 import { buildModel, parseSolution, formatSolution } from './case.js';
 import { ruleConstraints, clueConstraint, atConstraint } from './constraints.js';
 import { solve, exists, countUpTo2 } from './solver.js';
+import { validatePresentation } from './presentation.js';
 
 export const EXHAUSTIVE_CLUE_LIMIT = 12;
 
@@ -38,17 +39,26 @@ function smallestSubsets(clues, holds, fromSize = 0) {
 
 /**
  * Analyses a case object. Returns a plain, JSON-serialisable report.
+ * A case that names a "floorplan" is also checked for the fields the game page needs (spec 006);
+ * pass the plan as { floorplan }. Cases without "floorplan" are logic only.
  * report.ok is true when the case is valid, has exactly one solution and it matches `solution`.
  */
-export function analyze(caseData) {
+export function analyze(caseData, { floorplan } = {}) {
   const report = {
     case: { id: caseData?.id ?? null, title: caseData?.title ?? null },
     errors: [], warnings: [],
     solutionCount: null, solutions: [], conflict: null,
     matchesSolution: null, murderer: null,
     redundantClues: null, murderDecidedEarly: null, controlQuestions: null,
+    presentation: { checked: false, errors: [] },
     ok: false,
   };
+
+  // Presentation (floor plan, texts, markers). Its errors count as validation errors.
+  if (caseData && typeof caseData === 'object' && caseData.floorplan !== undefined) {
+    report.presentation = { checked: true, errors: validatePresentation(caseData, floorplan) };
+    report.errors.push(...report.presentation.errors);
+  }
 
   // 1. Validation
   const { errors, model } = buildModel(caseData);

@@ -1,0 +1,17 @@
+{
+  "id": "ring-2x2",
+  "shape": "ring",
+  "grid": { "cols": 2, "rows": 2 },
+  "slots": [
+    { "id": "nw", "x": 0, "y": 0, "w": 1, "h": 1 },
+    { "id": "ne", "x": 1, "y": 0, "w": 1, "h": 1 },
+    { "id": "se", "x": 1, "y": 1, "w": 1, "h": 1 },
+    { "id": "sw", "x": 0, "y": 1, "w": 1, "h": 1 }
+  ],
+  "doors": [
+    { "between": ["nw", "ne"], "at": 0.5 },
+    { "between": ["ne", "se"], "at": 0.5 },
+    { "between": ["se", "sw"], "at": 0.5 },
+    { "between": ["sw", "nw"], "at": 0.5 }
+  ]
+}

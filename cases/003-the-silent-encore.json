@@ -3,31 +3,54 @@
   "title": "The Silent Encore",
   "victim": "Madame Orlov",
   "level": "medium",
+  "floorplan": "chain-2x2",
   "rooms": [
-    { "id": "Par", "name": "Parlour" },
-    { "id": "Mus", "name": "Music Room" },
-    { "id": "Din", "name": "Dining Room" },
-    { "id": "Scu", "name": "Scullery" }
+    { "id": "Par", "name": "Parlour", "short": "Parlour", "slot": "nw" },
+    { "id": "Mus", "name": "Music Room", "short": "Music", "slot": "ne" },
+    { "id": "Din", "name": "Dining Room", "short": "Dining", "slot": "se" },
+    { "id": "Scu", "name": "Scullery", "short": "Scullery", "slot": "sw" }
   ],
   "doors": [["Par", "Mus"], ["Mus", "Din"], ["Din", "Scu"]],
   "suspects": [
-    { "id": "A", "name": "Alma" },
-    { "id": "B", "name": "Bruno" },
-    { "id": "C", "name": "Celia" },
-    { "id": "D", "name": "Dmitri" }
+    { "id": "A", "name": "Alma", "role": "the pupil" },
+    { "id": "B", "name": "Bruno", "role": "the piano tuner" },
+    { "id": "C", "name": "Celia", "role": "the niece" },
+    { "id": "D", "name": "Dmitri", "role": "the cook" }
   ],
   "times": ["21:00", "22:00", "23:00"],
-  "murder": { "room": "Mus", "time": "22:00" },
+  "murder": { "room": "Mus", "time": "22:00", "device": "the mantel clock was knocked to the floor" },
+  "intro": [
+    { "h": "Madame Orlov is dead.",
+      "t": "She died in the Music Room at 22:00, when the mantel clock was knocked to the floor. Whoever was in that room at 22:00 is the killer." },
+    { "h": "Four people were in the house.",
+      "t": "Alma the pupil, Bruno the piano tuner, Celia the niece and Dmitri the cook. After the quarrel at dinner nobody would share a room. Four people, four rooms: every room was taken at every hour." },
+    { "h": "The clock chimes every hour.",
+      "t": "Between chimes there is only time to walk through one door, or to stay put. Rebuild the night hour by hour, and find out who was in the Music Room at 22:00." }
+  ],
+  "reasons": {
+    "occupied": "After the quarrel, nobody would share a room.",
+    "far": "There is only time for one door per chime."
+  },
   "clues": [
-    { "id": 1, "text": "Celia was turning pages for Madame Orlov in the Music Room at 21:00.",
+    { "id": 1, "lead": "The score is still open on the piano.",
+      "text": "Celia was turning pages for Madame Orlov in the Music Room at 21:00.",
+      "hint": "Tap Celia, then tap the Music Room.", "marker": "Mus",
       "constraint": { "type": "at", "person": "C", "room": "Mus", "time": "21:00" } },
-    { "id": 2, "text": "At 23:00 Bruno was in the Music Room. He found the body.",
+    { "id": 2, "lead": "It was Bruno who raised the alarm.",
+      "text": "At 23:00 Bruno was in the Music Room. He found the body.",
+      "hint": "Another fixed point. Switch to 23:00 and place Bruno.", "marker": "Mus",
       "constraint": { "type": "at", "person": "B", "room": "Mus", "time": "23:00" } },
-    { "id": 3, "text": "Bruno was not invited to dinner. He never entered the Dining Room.",
+    { "id": 3, "lead": "The table was laid for three.",
+      "text": "Bruno was not invited to dinner. He never entered the Dining Room.",
+      "hint": "Nothing to place yet. Use it to rule rooms out: which rooms could Bruno have used?", "marker": "Din",
       "constraint": { "type": "notAt", "person": "B", "rooms": ["Din"] } },
-    { "id": 4, "text": "Dmitri lets no pupil into his Scullery. Alma never set foot there.",
+    { "id": 4, "lead": "The cook keeps the key on his belt.",
+      "text": "Dmitri lets no pupil into his Scullery. Alma never set foot there.",
+      "hint": "Every room is taken at every hour. So who was in the Scullery?", "marker": "Scu",
       "constraint": { "type": "notAt", "person": "A", "rooms": ["Scu"] } },
-    { "id": 5, "text": "Dmitri's kettle boiled dry. Between 22:00 and 23:00 he changed rooms.",
+    { "id": 5, "lead": "On the stove, a kettle has boiled dry.",
+      "text": "Between 22:00 and 23:00 Dmitri changed rooms.",
+      "hint": "Dmitri moved between 22:00 and 23:00. Only one door per chime.", "marker": "Scu",
       "constraint": { "type": "moved", "person": "D", "from": "22:00" } }
   ],
   "solution": {
@@ -38,5 +61,14 @@
   },
   "controlQuestions": [
     { "person": "C", "time": "23:00" }
-  ]
+  ],
+  "ending": [
+    "21:00 · Celia turns pages for Madame Orlov in the Music Room. Alma waits in the Dining Room for her lesson.",
+    "Celia goes to clear the table. Alma passes her in the doorway.",
+    "22:00 · “This is your last lesson.” The mantel clock crashes to the floor. Madame Orlov is dead, and Alma is alone with her.",
+    "Alma slips into the Parlour as Bruno walks in to tune the piano. Dmitri and Celia change places.",
+    "23:00 · Bruno finds the body and raises the alarm."
+  ],
+  "closing": "Alma was alone with Madame Orlov when the clock fell.",
+  "share": { "title": "The Silent Encore", "number": "003" }
 }

@@ -3,6 +3,7 @@
 // Exit code 0 when the case is valid, has exactly one solution and it matches "solution". Otherwise 1.
 import { readFileSync } from 'node:fs';
 import { analyze } from '../engine/index.js';
+import { loadFloorplan } from './lib/load.js';
 
 const args = process.argv.slice(2);
 const asJson = args.includes('--json');
@@ -22,7 +23,7 @@ try {
 }
 
 const t0 = performance.now();
-const report = analyze(data);
+const report = analyze(data, { floorplan: loadFloorplan(data) });
 const ms = Math.round(performance.now() - t0);
 
 if (asJson) {
@@ -41,6 +42,9 @@ function formatText(c, r, ms) {
   h('1. Validation');
   if (r.errors.length) r.errors.forEach((e) => lines.push(`  ✗ ${e}`));
   else lines.push('  ✓ No errors');
+  lines.push(r.presentation.checked
+    ? `  ${r.presentation.errors.length ? '✗' : '✓'} Presentation (floor plan "${c.floorplan}", texts, markers) ${r.presentation.errors.length ? 'has errors' : 'is complete'}`
+    : '  – No "floorplan": logic only, the case cannot be opened in play.html');
   if (r.solutionCount === null) return lines.join('\n') + '\n\nResult: INVALID\n';
 
   h('2. Solutions');
