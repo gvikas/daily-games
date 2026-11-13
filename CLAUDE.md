@@ -33,6 +33,7 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - Kjør `npm run solve <fil>` etter hver endring i en sak. Exit-kode 0 betyr gyldig, nøyaktig én løsning og lik fasiten. `--json` gir rapporten som JSON.
 - `npm test` kjører alle tester. Nye ledetrådtyper skal ha egne tester.
 - En sak som skal kunne spilles, har `floorplan` og presentasjonsfeltene (`intro`, `lead`, `hint`, `marker`, `ending`, `share`). Formatet er beskrevet i `docs/specs/done/006-data-driven-case-page.md`. `npm run solve` sjekker også disse feltene.
+- Mistenkte kan ha et kort `label` (rolle, f.eks. «Barmaid»). Når det finnes, viser `play.html` rollen i stedet for navnet på chips, brikker, notater, anklage og i hjelpetekster. Funnene bruker da rollen («the barmaid»), og navnet brukes bare i åpningsscenen og avslutningen. Saker uten `label` viser navn som før.
 - Saker med id som starter på `test-`, er testsaker for hus og størrelser. De skal ikke inn i `site/cases/index.json`.
 
 ## Plantegninger
@@ -47,7 +48,23 @@ GitHub Pages publiserer bare `site/`. Filene i `site/cases/`, `site/floorplans/`
 4. Kjør `npm run publish-case <id>` på nytt etter endringer i en publisert sak, en plantegning eller `engine/floorplan.js`. `npm test` sier fra hvis kopiene er utdaterte.
 5. Ikke publiser en sak før dagen den gjelder. Fasiten ligger i JSON-filen og er offentlig så snart den er pushet.
 
-## Arbeidsflyt
-- Research og sparring skjer i Claude Cowork og skrives til `docs/`.
-- Utvikling skjer i Claude Code og tar utgangspunkt i en spec.
+## Arbeidsdeling
+To Claude-økter jobber i dette repoet. Saksformatet er kontrakten mellom dem.
+
+| | Cowork | Code |
+|---|---|---|
+| Eier og redigerer | `cases/*.json` og alt i `docs/` | `site/`, `engine/`, `scripts/`, `test/`, `floorplans/`, `CLAUDE.md`, `package.json` |
+| Kjører | `npm run solve` og `npm test`, for å sjekke saker | Alt, inkludert `npm run publish-case`, commit og push |
+| Trenger noe nytt | Skriver en spec i `docs/specs/` eller et notat i `docs/design/forslag-til-sparring.md` | Bygger det fra specen |
+
+Regler:
+- Code endrer ikke innholdet i en sak (ledetråder, tekster, fasit) uten å si fra. Rene formatendringer ved en migrering er greit, og skal nevnes i svaret.
+- Cowork endrer ikke kode. Trenger en sak noe formatet eller siden ikke støtter, skrives behovet opp, og Code bygger det.
+- `docs/playtest.md` og `docs/design/decisions.md` skrives av begge. Legg bare til nederst, og skriv aldri om det den andre har skrevet.
+- Filene i `site/cases/`, `site/floorplans/` og `site/lib/` er kopier. Ingen redigerer dem for hånd.
 - Når en implementering avviker fra specen, oppdater specen eller noter det i `decisions.md`.
+
+### Overlevering av en sak
+1. Cowork lager saken i `cases/`, kjører `npm run solve` (exit-kode 0) og `npm test`, og sier fra til Vikas at saken er klar. Advarsler fra solveren som er tilsiktet, står i `docs/playtest.md`.
+2. Vikas ber Code publisere: `npm run publish-case <id> <dato>`, commit og push.
+3. Code spiller saken gjennom i `play.html?case=<id>` på mobilbredde før push, og sier fra hvis noe i saken ikke lar seg vise.
