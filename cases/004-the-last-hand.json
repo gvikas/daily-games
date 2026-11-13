@@ -2,7 +2,7 @@
   "id": "004",
   "title": "The Last Hand",
   "victim": "Mr. Holm",
-  "level": "medium",
+  "level": "easy",
   "floorplan": "ring-2x2",
   "rooms": [
     {
@@ -52,22 +52,26 @@
     {
       "id": "A",
       "name": "Astrid",
-      "role": "the ski guide"
+      "role": "the guide",
+      "label": "Guide"
     },
     {
       "id": "B",
       "name": "Birger",
-      "role": "the sauna keeper"
+      "role": "the sauna keeper",
+      "label": "Keeper"
     },
     {
       "id": "C",
       "name": "Conrad",
-      "role": "the bookkeeper"
+      "role": "the clerk",
+      "label": "Clerk"
     },
     {
       "id": "D",
       "name": "Dagny",
-      "role": "the barmaid"
+      "role": "the barmaid",
+      "label": "Barmaid"
     }
   ],
   "times": [
@@ -87,7 +91,7 @@
     },
     {
       "h": "Four people were snowed in at the lodge.",
-      "t": "Astrid the ski guide, Birger the sauna keeper, Conrad the bookkeeper and Dagny the barmaid. After the row over the accounts nobody would share a room. Four people, four rooms: every room was taken at every hour."
+      "t": "Astrid the guide, Birger the sauna keeper, Conrad the clerk and Dagny the barmaid. After the row over the accounts nobody would share a room. Four people, four rooms: every room was taken at every hour."
     },
     {
       "h": "The clock chimes every hour.",
@@ -101,22 +105,60 @@
   "clues": [
     {
       "id": 1,
-      "lead": "The till roll is stamped 21:00.",
-      "text": "Dagny was polishing glasses in the Bar at 21:00.",
-      "hint": "Tap Dagny, then tap the Bar.",
-      "marker": "Bar",
+      "lead": "The cards are still on the table.",
+      "text": "At 21:00 the guide was playing cards with Mr. Holm in the Card Room.",
+      "hint": "Tap the Guide, then tap the Card Room.",
+      "marker": "Car",
       "constraint": {
         "type": "at",
-        "person": "D",
-        "room": "Bar",
+        "person": "A",
+        "room": "Car",
         "time": "21:00"
       }
     },
     {
       "id": 2,
-      "lead": "Birger hates the cold rooms.",
+      "lead": "The stones were hissing.",
+      "text": "At 21:00 the keeper was in the Sauna, pouring water on the stones.",
+      "hint": "Another fixed point. Place the Keeper at 21:00.",
+      "marker": "Sau",
+      "constraint": {
+        "type": "at",
+        "person": "B",
+        "room": "Sau",
+        "time": "21:00"
+      }
+    },
+    {
+      "id": 3,
+      "lead": "Her shoes are bone dry.",
+      "text": "The barmaid never set foot in the Ski Room.",
+      "hint": "Two rooms and two people are left at 21:00. Which room can the Barmaid have?",
+      "marker": "Ski",
+      "constraint": {
+        "type": "notAt",
+        "person": "D",
+        "rooms": [
+          "Ski"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "lead": "The till kept ringing.",
+      "text": "Between 21:00 and 22:00 the barmaid stayed in the same room.",
+      "hint": "She stayed put. Switch to 22:00 and place her.",
+      "constraint": {
+        "type": "stayed",
+        "person": "D",
+        "from": "21:00"
+      }
+    },
+    {
+      "id": 5,
+      "lead": "The keeper hates the cold rooms.",
       "text": "He never set foot in the Ski Room or the Card Room.",
-      "hint": "Nothing to place yet. Which rooms are left for Birger?",
+      "hint": "Look at 22:00. Which room is left for the Keeper?",
       "constraint": {
         "type": "notAt",
         "person": "B",
@@ -127,35 +169,10 @@
       }
     },
     {
-      "id": 3,
-      "lead": "The sauna stones were still hot.",
-      "text": "At 23:00 Birger was in the Sauna, ladling water on the stones.",
-      "hint": "Switch to 23:00 and place Birger. Then think back: where could he have been at 21:00?",
-      "marker": "Sau",
-      "constraint": {
-        "type": "at",
-        "person": "B",
-        "room": "Sau",
-        "time": "23:00"
-      }
-    },
-    {
-      "id": 4,
-      "lead": "Two trails of wet footprints cross in a doorway.",
-      "text": "Between 21:00 and 22:00, Astrid and Conrad swapped rooms.",
-      "hint": "They traded places through one door. Which two rooms were still free at 21:00?",
-      "constraint": {
-        "type": "swap",
-        "a": "A",
-        "b": "C",
-        "from": "21:00"
-      }
-    },
-    {
-      "id": 5,
+      "id": 6,
       "lead": "A tray of drinks was set down in a hurry.",
-      "text": "Between 22:00 and 23:00, Conrad and Dagny swapped rooms.",
-      "hint": "Conrad and Dagny traded through one door. Which doors join the rooms they could have been in?",
+      "text": "Between 22:00 and 23:00 the clerk and the barmaid swapped rooms.",
+      "hint": "They traded places through one door. Where was the Barmaid at 22:00?",
       "constraint": {
         "type": "swap",
         "a": "C",
@@ -193,13 +210,13 @@
     }
   ],
   "ending": [
-    "21:00 · Astrid plays cards with Mr. Holm. Conrad waxes skis, Dagny minds the Bar, and Birger stokes the sauna.",
-    "Astrid leaves the table for the Ski Room. Conrad passes her in the doorway.",
-    "22:00 · “You have been cooking the books.” The cuckoo clock is torn from the wall. Mr. Holm is dead, and Conrad is alone with him.",
-    "Conrad slips into the Bar as Dagny carries a tray of drinks into the Card Room.",
-    "23:00 · Dagny drops the tray and screams."
+    "21:00 · The guide plays cards with Mr. Holm. The clerk waxes skis, the barmaid minds the Bar, and the keeper stokes the sauna.",
+    "The guide leaves the table for the Ski Room. Conrad the clerk passes her in the doorway.",
+    "22:00 · “You have been cooking the books.” The cuckoo clock is torn from the wall. Mr. Holm is dead, and the clerk is alone with him.",
+    "The clerk slips into the Bar as the barmaid carries a tray of drinks into the Card Room.",
+    "23:00 · The barmaid drops the tray and screams."
   ],
-  "closing": "Conrad was alone with Mr. Holm when the clock fell.",
+  "closing": "The clerk was alone with Mr. Holm when the clock fell.",
   "share": {
     "title": "The Last Hand",
     "number": "004"
