@@ -6,6 +6,7 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v) => typeof v === 'string' && v.trim().length > 0;
 
 export const LIMITS = { rooms: [3, 6], suspects: [3, 6], times: [3, 5] };
+export const LABEL_MAX = 7; // "Barmaid" fits on a chip with four suspects in a row; longer labels do not
 
 /**
  * caseData: the case. plan: the floor plan it names, or null/undefined when it was not found.
@@ -53,6 +54,24 @@ export function validatePresentation(caseData, plan) {
   }
 
   for (const s of suspects) if (s.role !== undefined && !isStr(s.role)) errors.push(`suspect "${s.id}": "role" must be a text`);
+
+  // "label": a short role shown instead of the name on chips, tokens and notes. All suspects or none.
+  const labelled = suspects.filter((s) => s.label !== undefined);
+  if (labelled.length) {
+    if (labelled.length !== suspects.length) errors.push('label: either every suspect has a "label" or none has');
+    const letters = new Map(), seen = new Map();
+    for (const s of labelled) {
+      if (!isStr(s.label)) { errors.push(`suspect "${s.id}": "label" must be a non-empty text`); continue; }
+      const label = s.label.trim();
+      if (label !== s.label) errors.push(`suspect "${s.id}": "label" has spaces around it`);
+      if (label.length > LABEL_MAX) errors.push(`suspect "${s.id}": label "${label}" is longer than ${LABEL_MAX} characters and will not fit on a chip`);
+      const key = label.toLowerCase(), letter = label.charAt(0).toUpperCase();
+      if (seen.has(key)) errors.push(`suspects "${seen.get(key)}" and "${s.id}" have the same label "${label}"`);
+      else if (letters.has(letter)) errors.push(`suspects "${letters.get(letter)}" and "${s.id}": labels start with the same letter "${letter}", so their tokens would look alike`);
+      seen.set(key, s.id);
+      if (!letters.has(letter)) letters.set(letter, s.id);
+    }
+  }
   if (!isStr(c.victim)) errors.push('victim: must be a non-empty text');
 
   // Texts

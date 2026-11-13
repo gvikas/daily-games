@@ -80,3 +80,34 @@ test('sizes outside what the page supports', () => {
   const c = base(); c.times = ['21:00', '22:00'];
   hasError(c, chain(), 'times: the page supports 3–5');
 });
+
+// --- "label": a short role shown instead of the name ---
+
+const withLabels = (labels) => { const c = base(); c.suspects.forEach((s, i) => { if (labels[i] !== undefined) s.label = labels[i]; }); return c; };
+
+test('labels are optional, and a full set of short labels with different first letters is fine', () => {
+  assert.deepEqual(validatePresentation(withLabels(['Pupil', 'Tuner', 'Niece', 'Cook']), chain()), []);
+  assert.deepEqual(validatePresentation(base(), chain()), []);
+  assert.deepEqual(validatePresentation(read('../cases/004-the-last-hand.json'), read('../floorplans/ring-2x2.json')), []);
+});
+
+test('label must be a non-empty text without spaces around it', () => {
+  hasError(withLabels(['Pupil', 'Tuner', 'Niece', '']), chain(), 'suspect "D": "label" must be a non-empty text');
+  hasError(withLabels(['Pupil', 'Tuner', 'Niece', 7]), chain(), 'suspect "D": "label" must be a non-empty text');
+  hasError(withLabels(['Pupil', 'Tuner', 'Niece', ' Cook']), chain(), 'spaces around it');
+});
+
+test('label longer than seven characters does not fit on a chip', () => {
+  assert.deepEqual(validatePresentation(withLabels(['Barmaid', 'Tuner', 'Niece', 'Cook']), chain()), []);
+  hasError(withLabels(['Pupil', 'Musician', 'Niece', 'Cook']), chain(), 'label "Musician" is longer than 7 characters');
+});
+
+test('labels must differ and start with different letters, because the token shows the first letter', () => {
+  hasError(withLabels(['Pupil', 'Tuner', 'Niece', 'Nurse']), chain(), 'labels start with the same letter "N"');
+  hasError(withLabels(['Pupil', 'Tuner', 'Cook', 'cook']), chain(), 'have the same label');
+  hasError(withLabels(['Pupil', 'Tuner', 'Niece', 'porter']), chain(), 'labels start with the same letter "P"');
+});
+
+test('either every suspect has a label or none has', () => {
+  hasError(withLabels(['Pupil', 'Tuner']), chain(), 'either every suspect has a "label" or none has');
+});

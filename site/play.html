@@ -114,6 +114,9 @@ a{color:inherit}
 .tbtn .dot{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;color:var(--on-token);font:800 .85rem var(--f-display)}
 .tbtn .who{display:flex;flex-direction:column;gap:3px;min-width:0}
 .tbtn b{font-size:.82rem;font-weight:600;line-height:1}
+.tray.long .tbtn{gap:4px;padding:4px 4px 4px 3px}
+.tray.long .tbtn .dot{flex-basis:22px;height:22px;font-size:.76rem}
+.tray.long .tbtn b{font-size:.72rem;letter-spacing:-.01em}
 .tbtn .dots{display:flex;gap:3px}
 .tbtn .dots i{width:7px;height:7px;border-radius:50%;border:1px solid var(--muted)}
 .tbtn .dots i.on{background:var(--ink);border-color:var(--ink)}
@@ -206,6 +209,12 @@ a{color:inherit}
   .pbtn{padding:7px 2px}
   .story h2{font-size:1.25rem}
   .story .big{font-size:1.05rem}
+}
+/* Smale telefoner (320 px): chipene er 68 px brede, så lange navn og roller må krympe litt til. */
+@media (max-width:359px){
+  .tray.long .tbtn{gap:3px}
+  .tray.long .tbtn .dot{flex-basis:20px;height:20px;font-size:.7rem}
+  .tray.long .tbtn b{font-size:.64rem;letter-spacing:-.02em}
 }
 @media (prefers-reduced-motion: reduce){ *{animation:none !important} }
 </style>
@@ -353,11 +362,17 @@ async function getJson(url){
 function start(c, plan){
   // --- Data fra saken ---
   var P = c.suspects.map(function(s){ return s.id; });
-  var NM = {}, COL = {}, LET = {};
+  // Valgfri "label" (kort rolle, f.eks. "Cook") vises i stedet for navnet på chips, brikker og i hjelpetekster.
+  // Uten "label" er alt som før: navnet vises, og brikken får id-bokstaven.
+  // NAME er alltid det egentlige navnet. Det brukes bare der historien fortelles.
+  var NM = {}, COL = {}, LET = {}, LBL = {}, NAME = {};
   c.suspects.forEach(function(s, i){
-    NM[s.id] = s.name; COL[s.id] = 'var(--p-' + 'abcdef'[i] + ')';
-    LET[s.id] = s.id.length <= 2 ? s.id : s.name.charAt(0);
+    LBL[s.id] = s.label || null; NAME[s.id] = s.name;
+    NM[s.id] = s.label || s.name; COL[s.id] = 'var(--p-' + 'abcdef'[i] + ')';
+    LET[s.id] = s.label ? s.label.charAt(0).toUpperCase() : (s.id.length <= 2 ? s.id : s.name.charAt(0));
   });
+  function who(p){ return LBL[p] ? 'the ' + LBL[p].toLowerCase() : NM[p]; }
+  function Who(p){ return LBL[p] ? 'The ' + LBL[p].toLowerCase() : NM[p]; }
   var ROOMS = c.rooms.map(function(r){ return r.id; });
   var RN = {}, RS = {}, SLOT = {};
   c.rooms.forEach(function(r){ RN[r.id] = r.name; RS[r.id] = r.short || r.name; SLOT[r.id] = r.slot; });
@@ -376,7 +391,7 @@ function start(c, plan){
     occupied: (c.reasons && c.reasons.occupied) || 'Nobody would share a room.',
     far: (c.reasons && c.reasons.far) || 'There is only time for one door per hour.'
   };
-  var CLOSING = c.closing || (NM[KILLER] + ' was alone with ' + c.victim + ' when ' + (c.murder.device || 'it happened') + '.');
+  var CLOSING = c.closing || (NAME[KILLER] + ' was alone with ' + c.victim + ' when ' + (c.murder.device || 'it happened') + '.');
   var KEY = 'case-' + c.id + '-intro-seen', OLDKEY = 'c' + c.id + '-intro-seen';
   var WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
   if ([P, ROOMS, HRS, CLUES, INTRO, STORY].some(function(a){ return !a.length; }) || MI < 0 || CQH < 0 || !KILLER || !ANSWER.room || STORY.length !== 2 * T - 1) throw new Error('incomplete case');
@@ -403,6 +418,9 @@ function start(c, plan){
   root.setProperty('--ar', (lay.viewBox[2] / lay.viewBox[3]).toFixed(4));
   root.setProperty('--times', T);
   root.setProperty('--tray-cols', NP <= 4 ? NP : 3);
+  // Lange navn eller roller får litt mindre skrift, slik at fire chips får plass på én rad.
+  // Med fem eller seks mistenkte står chipene tre i bredden og har plass nok.
+  $('tray').classList.toggle('long', NP === 4 && P.some(function(p){ return NM[p].length > 6; }));
   root.setProperty('--pick-s', NP <= 4 ? NP : 3);
   root.setProperty('--pick-r', ROOMS.length <= 4 ? ROOMS.length : 3);
 
@@ -476,7 +494,7 @@ function start(c, plan){
     $('clueList').appendChild(li); clues[String(k.id)] = li;
   });
   $('qS').textContent = 'Who killed ' + c.victim + '?';
-  $('qR').textContent = 'Prove it. Where was ' + NM[CQ.person] + ' at ' + CQ.time + '?';
+  $('qR').textContent = 'Prove it. Where was ' + who(CQ.person) + ' at ' + CQ.time + '?';
   $('closing').textContent = CLOSING;
   P.forEach(function(p){ $('pickS').appendChild(h('button', { class: 'pbtn', type: 'button', 'data-v': p, 'aria-pressed': 'false', text: NM[p] })); });
   ROOMS.forEach(function(r){ $('pickR').appendChild(h('button', { class: 'pbtn', type: 'button', 'data-v': r, 'aria-pressed': 'false', 'aria-label': RN[r], text: RS[r] })); });
@@ -670,8 +688,8 @@ function start(c, plan){
     if (guide){ cap.textContent = hintOf(0); return; }
     if (!sel){ cap.textContent = 'Pick a person, then tap a room.'; return; }
     cap.textContent = place[sel][hour]
-      ? NM[sel] + ' is in the ' + RN[place[sel][hour]] + ' at ' + HRS[hour] + '. Tap another room to move.'
-      : 'Where was ' + NM[sel] + ' at ' + HRS[hour] + '? Green rooms are possible.';
+      ? Who(sel) + ' is in the ' + RN[place[sel][hour]] + ' at ' + HRS[hour] + '. Tap another room to move.'
+      : 'Where was ' + who(sel) + ' at ' + HRS[hour] + '? Green rooms are possible.';
   }
 
   chips.forEach(function(b){
@@ -684,12 +702,12 @@ function start(c, plan){
     if (place[sel][hour] === room){ say(); return; }
     var st = check(sel, room, hour);
     if (st === 'occupied'){ cap.textContent = RN[room] + ' is taken at ' + HRS[hour] + '. ' + REASON.occupied; return; }
-    if (st === 'far'){ cap.textContent = NM[sel] + ' can’t get to the ' + RN[room] + ' in one hour. ' + REASON.far; return; }
+    if (st === 'far'){ cap.textContent = Who(sel) + ' can’t get to the ' + RN[room] + ' in one hour. ' + REASON.far; return; }
     place[sel][hour] = room;
     if (guide && sel === guide.p && hour === guide.h && room === guide.room){
-      guide = null; cap.textContent = NM[sel] + ' was in the ' + RN[room] + ' at ' + HRS[hour] + '. One fact fixed. Take the next finding.';
+      guide = null; cap.textContent = Who(sel) + ' was in the ' + RN[room] + ' at ' + HRS[hour] + '. One fact fixed. Take the next finding.';
       if (revealed < NC) nextClue.classList.add('nudge');
-    } else cap.textContent = NM[sel] + ' in the ' + RN[room] + ' at ' + HRS[hour] + '.';
+    } else cap.textContent = Who(sel) + ' in the ' + RN[room] + ' at ' + HRS[hour] + '.';
     sel = null; still();
   }
   hits.forEach(function(r){
@@ -698,7 +716,7 @@ function start(c, plan){
   });
   rm.addEventListener('click', function(){
     if (mode !== 'investigate' || !sel || !place[sel][hour]) return;
-    cap.textContent = NM[sel] + ' removed from the ' + RN[place[sel][hour]] + '.';
+    cap.textContent = Who(sel) + ' removed from the ' + RN[place[sel][hour]] + '.';
     place[sel][hour] = null; sel = null; still();
   });
   hourBtns.forEach(function(b){
@@ -747,7 +765,7 @@ function start(c, plan){
   $('accuse').addEventListener('click', function(){
     if (solved) return;
     startT();
-    if (!pickS || !pickR){ msg.textContent = 'Choose a suspect and say where ' + NM[CQ.person] + ' was at ' + CQ.time + '.'; return; }
+    if (!pickS || !pickR){ msg.textContent = 'Choose a suspect and say where ' + who(CQ.person) + ' was at ' + CQ.time + '.'; return; }
     if (pickS === ANSWER.suspect && pickR === ANSWER.room){
       solved = true; clearInterval(tmr); tick();
       var res = ''; for (var i = 0; i < strikes; i++) res += '🟥'; res += '🟩';
