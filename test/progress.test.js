@@ -54,7 +54,7 @@ test('reset clears the case and its extra keys, and nothing else', () => {
   p.strike(1); p.markStayTip();
   createProgress(store, '003').strike(1);
   const s = p.reset();
-  assert.deepEqual(s, { strikes: 0, outcome: null, seconds: null, stayTip: false });
+  assert.deepEqual(s, { strikes: 0, outcome: null, seconds: null, stayTip: false, startedAt: null });
   assert.equal(store.getItem('case-004-progress'), null);
   assert.equal(store.getItem('case-004-intro-seen'), null);
   assert.equal(store.getItem('case-003-intro-seen'), '1');
@@ -88,4 +88,11 @@ test('a broken or tampered record is read safely', () => {
   const s = createProgress(store, '004').load();
   assert.deepEqual([s.strikes, s.outcome], [3, null]);
   assert.equal(attemptsLeft(s), 0);
+});
+
+test('the start time is set once and survives a reload', () => {
+  const store = memoryStorage();
+  assert.equal(createProgress(store, '004').start(1000).startedAt, 1000);
+  assert.equal(createProgress(store, '004').start(5000).startedAt, 1000, 'a later start does not move the clock');
+  assert.equal(createProgress(store, '004').reset().startedAt, null);
 });

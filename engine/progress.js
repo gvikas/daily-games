@@ -4,7 +4,7 @@
 
 export const MAX_ATTEMPTS = 3;
 
-const blank = () => ({ strikes: 0, outcome: null, seconds: null, stayTip: false });
+const blank = () => ({ strikes: 0, outcome: null, seconds: null, stayTip: false, startedAt: null });
 
 /**
  * storage:   an object with getItem/setItem/removeItem (localStorage), or null.
@@ -28,6 +28,7 @@ export function createProgress(storage, caseId, extraKeys = []) {
             outcome: v.outcome === 'solved' || v.outcome === 'unsolved' ? v.outcome : null,
             seconds: Number.isFinite(v.seconds) ? v.seconds : null,
             stayTip: v.stayTip === true,
+            startedAt: Number.isFinite(v.startedAt) ? v.startedAt : null,
           };
         }
       } catch { /* a broken record counts as nothing saved */ }
@@ -56,6 +57,11 @@ export function createProgress(storage, caseId, extraKeys = []) {
       return write({ ...s, outcome: 'solved', seconds });
     },
     markStayTip() { return write({ ...read(), stayTip: true }); },
+    /** The time the player started the case (ms). Set once, so the clock survives a reload. */
+    start(now) {
+      const s = read();
+      return s.startedAt !== null ? s : write({ ...s, startedAt: now });
+    },
     reset() {
       memory = blank();
       for (const k of [key, ...extraKeys]) safe(() => storage.removeItem(k), null);
