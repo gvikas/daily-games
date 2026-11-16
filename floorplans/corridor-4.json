@@ -1,0 +1,16 @@
+{
+  "id": "corridor-4",
+  "shape": "chain",
+  "grid": { "cols": 3, "rows": 2 },
+  "slots": [
+    { "id": "nw", "x": 0, "y": 0, "w": 2, "h": 1 },
+    { "id": "e",  "x": 2, "y": 0, "w": 1, "h": 2 },
+    { "id": "s",  "x": 1, "y": 1, "w": 1, "h": 1 },
+    { "id": "sw", "x": 0, "y": 1, "w": 1, "h": 1 }
+  ],
+  "doors": [
+    { "between": ["nw", "e"], "at": 0.5 },
+    { "between": ["e", "s"], "at": 0.5 },
+    { "between": ["s", "sw"], "at": 0.5 }
+  ]
+}
