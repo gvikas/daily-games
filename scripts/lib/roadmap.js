@@ -130,10 +130,38 @@ const stamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 function gateDiamond(id, verdict = 'open', extra = '') {
   return `<span class="gate v-${esc(verdict)}"${extra}><span>${esc(id)}</span></span>`;
 }
-function gateProgress(g) {
-  const crit = Array.isArray(g.criteria) ? g.criteria : [];
-  const met = crit.filter((c) => c && c.status === 'met').length;
-  return { met, total: crit.length, text: `${met} av ${crit.length} kriterier oppfylt` };
+/** Counts per status. Anything that is not "met" or "unmet" counts as not measured. */
+export function gateSummary(g) {
+  const crit = (Array.isArray(g && g.criteria) ? g.criteria : []).filter(isObj);
+  const met = crit.filter((c) => c.status === 'met').length;
+  const unmet = crit.filter((c) => c.status === 'unmet').length;
+  const unknown = crit.length - met - unmet;
+  return { met, unmet, unknown, total: crit.length, text: `${met} oppfylt · ${unmet} ikke oppfylt · ${unknown} ikke målt` };
+}
+
+/**
+ * The gate that matters now: the gate of the increment in progress, or else the first gate
+ * after it. Without an increment in progress, the first gate on an increment that is not done.
+ * Returns the gate id, or null.
+ */
+export function activeGateId(roadmap) {
+  const incs = (Array.isArray(roadmap.increments) ? roadmap.increments : []).filter(isObj);
+  const gateIds = new Set((Array.isArray(roadmap.gates) ? roadmap.gates : []).filter(isObj).map((g) => g.id));
+  const has = (i) => i.gate && gateIds.has(i.gate);
+  const ci = incs.findIndex((i) => i.status === 'current');
+  if (ci >= 0) {
+    const after = incs.slice(ci).find(has);
+    return after ? after.gate : null;
+  }
+  const open = incs.find((i) => i.status !== 'done' && has(i));
+  return open ? open.gate : null;
+}
+
+/** The three-part bar: met, not met, not measured. Each part has its own pattern, not only colour. */
+function triBar(sum, cls = '') {
+  if (!sum.total) return '';
+  const part = (n, kind, label) => (n ? `<i class="tb-${kind}" style="flex:${n}" title="${n} ${label}"></i>` : '');
+  return `<span class="tribar ${cls}" role="img" aria-label="${esc(sum.text)}">${part(sum.met, 'met', 'oppfylt')}${part(sum.unmet, 'unmet', 'ikke oppfylt')}${part(sum.unknown, 'unknown', 'ikke målt')}</span>`;
 }
 
 function section(eyebrow, title, body, intro = '') {
@@ -153,7 +181,8 @@ export function renderPage(model) {
 
   // 1. Top
   const nowLine = cur ? `Nå: <b>Inkrement ${esc(cur.id)}</b> · ${esc(cur.title)}` : allDone ? '<b>Alle inkrementer er ferdige</b>' : '<b>Ingen pågår</b>';
-  const curGate = cur && cur.gate && gateById[cur.gate];
+  const activeId = activeGateId(r);
+  const curGate = activeId && gateById[activeId];
   out.push(`<header class="hero">
   <div class="hero-text">
     <span class="eyebrow">${esc(r.subtitle || 'Roadmap')}${r.updated ? ` · oppdatert ${fmtDate(r.updated)}${r.updatedBy ? ` av ${esc(r.updatedBy)}` : ''}` : ''}</span>
@@ -163,7 +192,7 @@ export function renderPage(model) {
   <div class="card nowcard">
     <span class="eyebrow">Status</span>
     <p class="now">${nowLine}</p>
-    ${curGate ? (() => { const p = gateProgress(curGate); return `<div class="gatenow">${gateDiamond(curGate.id, curGate.verdict)}<div><b>Port ${esc(curGate.id)} · ${esc(curGate.title)}</b><div class="mini"><div class="segbar"><i style="width:${p.total ? Math.round((p.met / p.total) * 100) : 0}%"></i></div><span>${p.met}/${p.total}</span></div><span class="small muted">${esc(p.text)}</span></div></div>`; })() : ''}
+    ${curGate ? (() => { const p = gateSummary(curGate); return `<div class="gatenow">${gateDiamond(curGate.id, curGate.verdict)}<div><b>Port ${esc(curGate.id)} · ${esc(curGate.title)}</b>${triBar(p)}<span class="small muted">${esc(p.text)}</span></div></div>`; })() : ''}
   </div>
 </header>`);
 
@@ -201,7 +230,7 @@ export function renderPage(model) {
   <summary><div class="top"><span class="tag">INKREMENT ${esc(i.id)}${i.hours ? ' · ' + esc(i.hours) : ''}</span><span class="state ${st.cls}">${st.label}</span></div>
   <h3>${esc(i.title)}${i.kind === 'learning' ? ' <span class="tag learn">LÆRING</span>' : ''}</h3>${i.question ? `<p class="q">${esc(i.question)}</p>` : ''}</summary>
   ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${txt(v)}</dd>`).join('')}</dl>` : ''}
-  <div class="foot">${g ? `${gateDiamond(g.id, g.verdict)}<span>Port ${esc(g.id)}: ${esc(gateProgress(g).text)}</span>` : `<span class="muted">${i.kind === 'learning' ? 'Ingen port. Læringsinkrement' : 'Ingen port'}</span>`}</div>
+  <div class="foot">${g ? `${gateDiamond(g.id, g.verdict)}<span>Port ${esc(g.id)}${g.verdict === 'go' ? ' er passert' : `: ${esc(gateSummary(g).text)}`}</span>` : `<span class="muted">${i.kind === 'learning' ? 'Ingen port. Læringsinkrement' : 'Ingen port'}</span>`}</div>
 </details>`;
     }).join('');
     out.push(section(`${num()} · Inkrementer`, 'Ett spørsmål per inkrement', `<div class="grid g3 incrs">${cards}</div>`, 'Det pågående inkrementet er åpent. Trykk på de andre for å se hva som bygges og testes.'));
@@ -210,16 +239,19 @@ export function renderPage(model) {
   // 5. Gates
   if (gates.length) {
     const cards = gates.map((g) => {
-      const p = gateProgress(g);
+      const p = gateSummary(g);
+      const passed = g.verdict === 'go';
+      const open = g.id === activeId && !passed;
       const crit = (Array.isArray(g.criteria) ? g.criteria : []).filter(isObj);
-      return `<div class="card gatecard${cur && cur.gate === g.id ? ' cur' : ''}">
-  <div class="gh">${gateDiamond(g.id, g.verdict, ' style="margin:0"')}<h3>${esc(g.title)}</h3><span class="stamp v-${esc(g.verdict || 'open')}">${VERDICT[g.verdict] || esc(g.verdict || 'ÅPEN')}</span></div>
-  <div class="mini"><div class="segbar"><i style="width:${p.total ? Math.round((p.met / p.total) * 100) : 0}%"></i></div><span>${esc(p.text)}</span></div>
-  <ul class="crits">${crit.map((c) => { const s = CRIT[c.status] || CRIT.unknown; return `<li class="crit ${s.cls}"><span class="cm" title="${s.label}" aria-label="${s.label}">${s.mark}</span><div><span class="ct">${esc(c.text)}</span>${c.measured ? `<span class="cmeas">${txt(c.measured)}</span>` : ''}</div></li>`; }).join('')}</ul>
+      const stampText = passed ? 'PASSERT' : VERDICT[g.verdict] || esc(g.verdict || 'ÅPEN');
+      return `<details class="card gatecard${open ? ' cur' : ''}${passed ? ' passed' : ''}"${open ? ' open' : ''}>
+  <summary><div class="gh">${gateDiamond(g.id, g.verdict, ' style="margin:0"')}<h3>Port ${esc(g.id)} · ${esc(g.title)}</h3><span class="stamp v-${esc(g.verdict || 'open')}">${stampText}</span></div>
+  ${triBar(p)}<span class="small muted gsum">${esc(p.text)}</span></summary>
+  <ul class="crits">${crit.map((c) => { const st = CRIT[c.status] || CRIT.unknown; return `<li class="crit ${st.cls}"><span class="cm" title="${st.label}" aria-label="${st.label}">${st.mark}</span><div><span class="ct">${esc(c.text)}</span>${c.measured ? `<span class="cmeas">${txt(c.measured)}</span>` : ''}</div></li>`; }).join('')}</ul>
   ${g.nogo ? `<p class="nogo"><b>No-go:</b> ${txt(g.nogo)}</p>` : ''}
-</div>`;
+</details>`;
     }).join('');
-    out.push(section(`${num()} · Portene`, 'Go eller no-go', `<div class="grid g2 gates">${cards}</div>`, 'Kriteriene er målt, ikke krysset av. ✓ oppfylt, ✗ ikke oppfylt, ? ikke målt ennå.'));
+    out.push(section(`${num()} · Portene`, 'Go eller no-go', `<div class="grid g2 gates">${cards}</div>`, 'Kriteriene er målt, ikke krysset av. ✓ oppfylt, ✗ ikke oppfylt, ? ikke målt ennå. Bare den aktuelle porten er åpen.'));
   }
 
   // 6. Specs
@@ -383,9 +415,23 @@ a:focus-visible,summary:focus-visible{outline:3px solid var(--blood);outline-off
 .incr.done{background:#EEF5F2}
 
 /* Porter */
+.gates{align-items:start}
 .gatecard{display:flex;flex-direction:column;gap:12px}
+.gatecard summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.gatecard summary::-webkit-details-marker{display:none}
+.gatecard:not([open]) summary::after{content:"Vis mer ›";font-family:var(--f-display);font-size:10px;color:var(--muted)}
+.gatecard[open] .crits{margin-top:12px}
 .gatecard.cur{border-color:var(--blood);box-shadow:4px 4px 0 var(--blood)}
+.gatecard.passed{background:#EEF5F2}
 .gatecard .gh{display:flex;gap:12px;align-items:center}
+/* Tredelt stripe: oppfylt (fylt grønn), ikke oppfylt (rød kryssravering), ikke målt (lys skravering) */
+.tribar{display:flex;height:14px;border:2px solid var(--ink);background:var(--paper);overflow:hidden;margin:2px 0}
+.tribar i{display:block;height:100%}
+.tribar i + i{border-left:2px solid var(--ink)}
+.tb-met{background:var(--ok)}
+.tb-unmet{background:repeating-linear-gradient(45deg,var(--blood) 0 3px,#E8A39C 3px 6px),var(--blood)}
+.tb-unknown{background:repeating-linear-gradient(-45deg,#BFC4CC 0 2px,#ECEEF1 2px 6px)}
+.gatenow .tribar{margin:6px 0 4px}
 .crits{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
 .crit{display:grid;grid-template-columns:24px 1fr;gap:10px;font-size:14px;line-height:1.4}
 .cm{font-family:var(--f-display);font-size:12px;width:22px;height:22px;display:grid;place-items:center;border:2px solid var(--ink);background:var(--paper)}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, collect, renderPage, esc, txt, RoadmapError } from '../scripts/lib/roadmap.js';
+import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, collect, renderPage, esc, txt, gateSummary, activeGateId, RoadmapError } from '../scripts/lib/roadmap.js';
 
 // Every test builds its own folder. Nothing here reads docs/, which is outside git.
 function fixture(files) {
@@ -99,7 +99,7 @@ test('the page shows where we are, the gate progress, specs, cases and decisions
     assert.match(html, /Nå: <b>Inkrement 2<\/b> · Second/);
     assert.match(html, /▲ Du er her/);
     assert.equal((html.match(/Du er her/g) || []).length, 1);
-    assert.match(html, /1 av 3 kriterier oppfylt/);
+    assert.match(html, /1 oppfylt · 1 ikke oppfylt · 1 ikke målt/);
     assert.match(html, /<details class="card incr cur ?" open>/);
     assert.match(html, /LÆRING/);
     assert.match(html, /<dt>LÆRT<\/dt><dd>L1<\/dd>/);
@@ -149,5 +149,73 @@ test('text from the sources is escaped; `code` is shown as code', () => {
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
     assert.match(html, /A &amp; B &lt;i&gt;/);
     assert.match(html, /x &lt; y &amp; <code>z<\/code>/);
+  });
+});
+
+// --- Gate summary and the gate that matters now ---
+
+test('gate summary counts met, not met and not measured separately', () => {
+  const g = { criteria: [{ status: 'met' }, { status: 'unmet' }, { status: 'unmet' }, { status: 'unknown' }, { status: 'maybe' }, {}] };
+  assert.deepEqual(gateSummary(g), { met: 1, unmet: 2, unknown: 3, total: 6, text: '1 oppfylt · 2 ikke oppfylt · 3 ikke målt' });
+  assert.equal(gateSummary({ criteria: [] }).text, '0 oppfylt · 0 ikke oppfylt · 0 ikke målt');
+  assert.equal(gateSummary({}).total, 0);
+});
+
+const incs = (...list) => list.map(([id, status, gate]) => ({ id, status, gate }));
+const gates = (...ids) => ids.map((id) => ({ id, verdict: 'open', criteria: [] }));
+
+test('the active gate is the gate of the increment in progress', () => {
+  assert.equal(activeGateId({ increments: incs([1, 'done', null], [2, 'current', 'A'], [3, 'later', 'B']), gates: gates('A', 'B') }), 'A');
+});
+
+test('without a gate on the increment in progress, the first gate after it is active', () => {
+  assert.equal(activeGateId({ increments: incs([1, 'done', 'A'], [2, 'current', null], [3, 'next', null], [4, 'later', 'B'], [5, 'later', 'C']), gates: gates('A', 'B', 'C') }), 'B');
+  assert.equal(activeGateId({ increments: incs([1, 'current', null], [2, 'later', null]), gates: gates('A') }), null, 'no gate after it');
+  assert.equal(activeGateId({ increments: incs([1, 'current', 'Z'], [2, 'later', 'B']), gates: gates('B') }), 'B', 'a gate id that does not exist is skipped');
+});
+
+test('with no increment in progress, the first gate on an unfinished increment is active', () => {
+  assert.equal(activeGateId({ increments: incs([1, 'done', 'A'], [2, 'next', null], [3, 'later', 'B']), gates: gates('A', 'B') }), 'B');
+  assert.equal(activeGateId({ increments: incs([1, 'done', 'A']), gates: gates('A') }), null);
+});
+
+test('only the active gate is open; passed gates are collapsed and marked', () => {
+  const r = roadmap({
+    increments: [
+      { id: 1, title: 'First', status: 'done', gate: 'A' },
+      { id: 2, title: 'Second', status: 'current', gate: null },
+      { id: 3, title: 'Third', status: 'later', gate: 'B' },
+      { id: 4, title: 'Fourth', status: 'later', gate: 'C' },
+    ],
+    gates: [
+      { id: 'A', title: 'Passed', verdict: 'go', criteria: [{ text: 'x', status: 'met' }] },
+      { id: 'B', title: 'Next up', verdict: 'open', criteria: [{ text: 'y', status: 'unmet' }, { text: 'z', status: 'unknown' }] },
+      { id: 'C', title: 'Later', verdict: 'open', criteria: [{ text: 'w', status: 'unknown' }] },
+    ],
+  });
+  withRoot(base(r), (root) => {
+    const html = renderPage(collect(root)).split('<body>')[1];
+    const cards = html.match(/<details class="card gatecard[^"]*"[^>]*>/g);
+    assert.deepEqual(cards, [
+      '<details class="card gatecard passed">',
+      '<details class="card gatecard cur" open>',
+      '<details class="card gatecard">',
+    ]);
+    assert.match(html, /PASSERT/);
+    assert.match(html, /Port A er passert/);
+    assert.match(html, /0 oppfylt · 1 ikke oppfylt · 1 ikke målt/);
+    // The status box at the top follows the active gate.
+    assert.match(html.split('</header>')[0], /Port B · Next up/);
+  });
+});
+
+test('the three-part bar has one part per status that occurs', () => {
+  withRoot(base(), (root) => {
+    const html = renderPage(collect(root)).split('<body>')[1];
+    const bar = html.match(/<span class="tribar[^>]*>.*?<\/span>/)[0];
+    assert.match(bar, /tb-met/);
+    assert.match(bar, /tb-unmet/);
+    assert.match(bar, /tb-unknown/);
+    assert.match(bar, /aria-label="1 oppfylt · 1 ikke oppfylt · 1 ikke målt"/);
   });
 });
