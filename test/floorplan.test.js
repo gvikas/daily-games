@@ -263,3 +263,18 @@ test('in a small murder room the clock time goes beside the face, clear of the t
   // Large rooms keep the time under the face, as before.
   assert.equal(decorate(layout(plan('chain-2x2')), { names: names3, murder: 'ne', markers: [] }).clockLabel, 'below');
 });
+
+test('in the small hall with three doors, clock, body and token do not overlap', () => {
+  const lay = layout(plan('hall-4'));
+  const d = decorate(lay, { names: { n: 'Stage', w: 'Dressing', c: 'Green Room', e: 'Office' }, murder: 'c', markers: [] });
+  const r = lay.rooms.c, token = { cx: r.center[0], cy: r.center[1], r: TOKEN_R };
+  const [x, y] = d.clock;
+  const shapes = { left: [x - 54, y - 14, x + 15, y + 14], right: [x - 15, y - 14, x + 54, y + 14], above: [x - 17, y - 30, x + 17, y + 14], below: [x - 17, y - 15, x + 17, y + 35] };
+  const [x1, y1, x2, y2] = shapes[d.clockLabel];
+  const clock = { x1, y1, x2, y2 };
+  const bodyBox = { x1: d.body[0] - 12, y1: d.body[1] - 16, x2: d.body[0] + 12, y2: d.body[1] + 16 };
+  assert.ok(gapBetween(clock, token) > 0, 'clock on the token');
+  assert.ok(gapBetween(bodyBox, token) > 0, 'body on the token');
+  assert.ok(gapBetween(clock, bodyBox) > 0, 'clock on the body');
+  assert.ok(x1 >= r.x && x2 <= r.x + r.w && y1 >= r.y && y2 <= r.y + r.h, 'clock outside the room');
+});

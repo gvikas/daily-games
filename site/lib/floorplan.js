@@ -290,13 +290,19 @@ export function decorate(lay, input) {
     if (under.score < 2) {
       const leftOf = (p) => box(p[0] - 54, p[1] - 14, p[0] + 15, p[1] + 14);
       const rightOf = (p) => box(p[0] - 15, p[1] - 14, p[0] + 54, p[1] + 14);
-      const a = chooseScored(r, [[R - 21, T + 21], [R - 21, B - 21]], leftOf, obs, 2);
-      const b = chooseScored(r, [[L + 21, T + (r.nameAt === 'top' ? 50 : 21)], [L + 21, B - (r.nameAt === 'bottom' ? 50 : 21)]], rightOf, obs, 2);
-      const side = a.score >= b.score ? { ...a, label: 'left', shape: leftOf } : { ...b, label: 'right', shape: rightOf };
-      if (side.score > under.score) { out.clock = side.pt; out.clockLabel = side.label; }
+      const above = (p) => box(p[0] - 17, p[1] - 30, p[0] + 17, p[1] + 14);
+      const top = T + (r.nameAt === 'top' ? 50 : 0);
+      const options = [
+        { label: 'left', shape: leftOf, ...chooseScored(r, [[R - 21, T + 21], [R - 21, B - 21]], leftOf, obs, 2) },
+        { label: 'right', shape: rightOf, ...chooseScored(r, [[L + 21, T + (r.nameAt === 'top' ? 50 : 21)], [L + 21, B - (r.nameAt === 'bottom' ? 50 : 21)]], rightOf, obs, 2) },
+        { label: 'above', shape: above, ...chooseScored(r, [[L + 21, top + 33], [R - 21, top + 33]], above, obs, 2) },
+      ];
+      const best = options.reduce((a, o) => (o.score > a.score ? o : a));
+      if (best.score > under.score) { out.clock = best.pt; out.clockLabel = best.label; }
     }
-    obs.push((out.clockLabel === 'left' ? (p) => box(p[0] - 54, p[1] - 14, p[0] + 15, p[1] + 14)
-      : out.clockLabel === 'right' ? (p) => box(p[0] - 15, p[1] - 14, p[0] + 54, p[1] + 14) : clockShape)(out.clock));
+    const labelShape = { left: (p) => box(p[0] - 54, p[1] - 14, p[0] + 15, p[1] + 14), right: (p) => box(p[0] - 15, p[1] - 14, p[0] + 54, p[1] + 14), above: (p) => box(p[0] - 17, p[1] - 30, p[0] + 17, p[1] + 14), below: clockShape };
+    obs.push(labelShape[out.clockLabel](out.clock));
+
     // Body: the chalk outline.
     const bodyShape = (p) => box(p[0] - 13, p[1] - 16, p[0] + 13, p[1] + 16);
     out.body = choose(r, [[L + 42, B - 36], [R - 42, B - 36], [L + 42, T + 60], [R - 42, T + 60]], bodyShape, obs, 2);

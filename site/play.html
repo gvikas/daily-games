@@ -479,7 +479,7 @@ function start(c, plan){
   clock.appendChild(el('line', { x1: cx, y1: cy, x2: cx, y2: cy - 10 }));
   clock.appendChild(el('line', { x1: cx, y1: cy, x2: cx - 7, y2: cy }));
   // Tidspunktet står under klokka, eller ved siden av når rommet er lite.
-  var cl = decor.clockLabel === 'left' ? { x: cx - 19, y: cy + 4, a: 'end' } : decor.clockLabel === 'right' ? { x: cx + 19, y: cy + 4, a: 'start' } : { x: cx, y: cy + 32, a: 'middle' };
+  var cl = decor.clockLabel === 'left' ? { x: cx - 19, y: cy + 4, a: 'end' } : decor.clockLabel === 'right' ? { x: cx + 19, y: cy + 4, a: 'start' } : decor.clockLabel === 'above' ? { x: cx, y: cy - 19, a: 'middle' } : { x: cx, y: cy + 32, a: 'middle' };
   var clockT = clock.appendChild(el('text', { id: 'clockT', x: cl.x, y: cl.y, 'text-anchor': cl.a }, HRS[MI]));
   var marks = {};
   CLUES.forEach(function(k){
