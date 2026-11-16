@@ -34,18 +34,19 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - `npm test` kjører alle tester. Nye ledetrådtyper skal ha egne tester.
 - En sak som skal kunne spilles, har `floorplan` og presentasjonsfeltene (`intro`, `lead`, `hint`, `marker`, `ending`, `share`). Formatet er beskrevet i `docs/specs/done/006-data-driven-case-page.md`. `npm run solve` sjekker også disse feltene.
 - Mistenkte kan ha et kort `label` (rolle, f.eks. «Barmaid»). Når det finnes, viser `play.html` rollen i stedet for navnet på chips, brikker, notater, anklage og i hjelpetekster. Funnene bruker da rollen («the barmaid»), og navnet brukes bare i åpningsscenen og avslutningen. Saker uten `label` viser navn som før.
+- Spilleren har tre forsøk per sak. Forsøk og resultat lagres per sak i `localStorage` (`case-<id>-progress`). `play.html?case=<id>&reset` nullstiller saken, til testing. Den skal ikke lenkes til.
 - Saker med id som starter på `test-`, er testsaker for hus og størrelser. De skal ikke inn i `site/cases/index.json`.
 
 ## Plantegninger
 - Hus ligger i `floorplans/<id>.json` som rektangler på et rutenett med dører. Ingen koordinater skrives for hånd: vegger, dører, romsentre og markører regnes ut i `engine/floorplan.js`.
-- `engine/floorplan.js` skal ikke importere noe. Den kopieres til `site/lib/floorplan.js`, og en test feiler hvis kopien er utdatert.
+- Modulene som `play.html` bruker (`engine/floorplan.js`, `engine/conflicts.js` og `engine/progress.js`, listen står i `scripts/lib/load.js`), skal ikke importere noe. De kopieres til `site/lib/` av `npm run publish-case`, og en test feiler hvis en kopi er utdatert eller en modul importerer noe.
 
 ## Publisere en sak
 GitHub Pages publiserer bare `site/`. Filene i `site/cases/`, `site/floorplans/` og `site/lib/` er kopier og skal ikke redigeres for hånd.
 1. `npm run solve cases/<id>-<slug>.json` skal gi exit-kode 0.
 2. `npm run publish-case <id> <ÅÅÅÅ-MM-DD>` validerer saken, kopierer den, plantegningen og `engine/floorplan.js` til `site/`, og fører saken inn i `site/cases/index.json` på den datoen. `site/index.html` åpner da saken den dagen, uten at noen URL endres for hånd.
 3. Uten dato kopieres saken uten å bli ført opp. Den kan åpnes med `play.html?case=<id>`.
-4. Kjør `npm run publish-case <id>` på nytt etter endringer i en publisert sak, en plantegning eller `engine/floorplan.js`. `npm test` sier fra hvis kopiene er utdaterte.
+4. Kjør `npm run publish-case <id>` på nytt etter endringer i en publisert sak, en plantegning eller en av modulene i `site/lib/`. `npm test` sier fra hvis kopiene er utdaterte.
 5. Ikke publiser en sak før dagen den gjelder. Fasiten ligger i JSON-filen og er offentlig så snart den er pushet.
 
 ## Arbeidsdeling
