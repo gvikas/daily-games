@@ -66,6 +66,10 @@ Regler:
 - Filene i `site/cases/`, `site/floorplans/` og `site/lib/` er kopier. Ingen redigerer dem for hånd.
 - Når en implementering avviker fra specen, oppdater specen eller noter det i `decisions.md`.
 
+### Roadmap-siden
+- `npm run roadmap` lager `docs/roadmap.html` fra `docs/roadmap.json` (Cowork), specs, saker og `decisions.md` (spec 009). Siden redigeres aldri for hånd.
+- Code kjører den når en spec flyttes til `docs/specs/done/`, og når en sak publiseres. Cowork kjører den, eller ber om en ny kjøring, når `roadmap.json`, `decisions.md` eller en spec er endret.
+
 ### Overlevering av en sak
 1. Cowork lager saken i `cases/`, kjører `npm run solve` (exit-kode 0) og `npm test`, og sier fra til Vikas at saken er klar. Advarsler fra solveren som er tilsiktet, står i `docs/playtest.md`.
 2. Vikas ber Code publisere: `npm run publish-case <id> <dato>`, commit og push.

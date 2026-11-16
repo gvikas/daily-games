@@ -9,6 +9,7 @@
   "scripts": {
     "solve": "node scripts/solve.js",
     "publish-case": "node scripts/publish-case.js",
+    "roadmap": "node scripts/roadmap.js",
     "test": "node --test \"test/*.test.js\""
   }
 }
