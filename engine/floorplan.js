@@ -140,6 +140,22 @@ export function layout(plan) {
     };
   });
 
+  // In small rooms a door leaf can swing over the token. Push the token away from such a door,
+  // but keep it clear of the walls and of the room name.
+  for (const d of doors) {
+    if (d.secret) continue;
+    const r = rooms[d.into];
+    const axis = d.vertical ? 0 : 1, other = 1 - axis;
+    const need = DOOR + TOKEN_R + 4;
+    if (Math.abs(r.center[other] - d.point[other]) >= DOOR / 2 + TOKEN_R) continue;
+    const dist = (r.center[axis] - d.line) * d.dir[axis];
+    if (dist >= need) continue;
+    const lo = axis === 0 ? r.x + TOKEN_R + 6 : r.y + TOKEN_R + 6 + (r.nameAt === 'top' ? 30 : 0);
+    const hi = axis === 0 ? r.x + r.w - TOKEN_R - 6 : r.y + r.h - TOKEN_R - 6 - (r.nameAt === 'bottom' ? 30 : 0);
+    const want = d.line + d.dir[axis] * need;
+    r.center[axis] = r1(Math.min(hi, Math.max(lo, d.dir[axis] > 0 ? Math.max(r.center[axis], want) : Math.min(r.center[axis], want))));
+  }
+
   for (const [key, segs] of lines) {
     const vertical = key[0] === 'v', line = px(Number(key.slice(2)));
     segs.sort((p, q) => p[0] - q[0]);
@@ -233,20 +249,23 @@ function inside(room, shape, pad) {
 
 /** First candidate that is inside the room and clear of every obstacle; otherwise the least bad spot. */
 function choose(room, candidates, shapeAt, obstacles, clearance) {
+  return chooseScored(room, candidates, shapeAt, obstacles, clearance).pt;
+}
+function chooseScored(room, candidates, shapeAt, obstacles, clearance) {
   const score = (pt) => {
     const s = shapeAt(pt);
     let min = Infinity;
     for (const o of obstacles) min = Math.min(min, gapBetween(s, o));
     return inside(room, s, 2) ? min : -1000 + min;
   };
-  for (const pt of candidates) if (score(pt) >= clearance) return pt;
+  for (const pt of candidates) { const sc = score(pt); if (sc >= clearance) return { pt, score: sc }; }
   let best = candidates[0], bestScore = -Infinity;
   const step = 4;
   for (let y = room.y + 12; y <= room.y + room.h - 12; y += step) for (let x = room.x + 12; x <= room.x + room.w - 12; x += step) {
     const s = score([x, y]);
     if (s > bestScore) { bestScore = s; best = [x, y]; }
   }
-  return best;
+  return { pt: best, score: bestScore };
 }
 
 /**
@@ -258,15 +277,26 @@ export function decorate(lay, input) {
   const obstacles = {};
   for (const slot of Object.keys(lay.rooms)) obstacles[slot] = roomObstacles(lay, slot, input.names[slot] || slot);
 
-  const out = { clock: null, body: null, bodyPath: null, notes: [], markers: {} };
+  const out = { clock: null, clockLabel: null, body: null, bodyPath: null, notes: [], markers: {} };
 
   if (input.murder && lay.rooms[input.murder]) {
     const r = lay.rooms[input.murder], obs = obstacles[input.murder];
     const L = r.x, R = r.x + r.w, T = r.y, B = r.y + r.h;
-    // Clock: a face with the time written under it.
+    // Clock: a face with the time written under it. In a small room the time goes beside the face.
     const clockShape = (p) => box(p[0] - 17, p[1] - 15, p[0] + 17, p[1] + 35);
-    out.clock = choose(r, [[R - 28, T + 40], [L + 28, T + (r.nameAt === 'top' ? 56 : 40)], [R - 28, B - 46], [L + 28, B - 46]], clockShape, obs, 2);
-    obs.push(clockShape(out.clock));
+    const under = chooseScored(r, [[R - 28, T + 40], [L + 28, T + (r.nameAt === 'top' ? 56 : 40)], [R - 28, B - 46], [L + 28, B - 46]], clockShape, obs, 2);
+    out.clockLabel = 'below';
+    out.clock = under.pt;
+    if (under.score < 2) {
+      const leftOf = (p) => box(p[0] - 54, p[1] - 14, p[0] + 15, p[1] + 14);
+      const rightOf = (p) => box(p[0] - 15, p[1] - 14, p[0] + 54, p[1] + 14);
+      const a = chooseScored(r, [[R - 21, T + 21], [R - 21, B - 21]], leftOf, obs, 2);
+      const b = chooseScored(r, [[L + 21, T + (r.nameAt === 'top' ? 50 : 21)], [L + 21, B - (r.nameAt === 'bottom' ? 50 : 21)]], rightOf, obs, 2);
+      const side = a.score >= b.score ? { ...a, label: 'left', shape: leftOf } : { ...b, label: 'right', shape: rightOf };
+      if (side.score > under.score) { out.clock = side.pt; out.clockLabel = side.label; }
+    }
+    obs.push((out.clockLabel === 'left' ? (p) => box(p[0] - 54, p[1] - 14, p[0] + 15, p[1] + 14)
+      : out.clockLabel === 'right' ? (p) => box(p[0] - 15, p[1] - 14, p[0] + 54, p[1] + 14) : clockShape)(out.clock));
     // Body: the chalk outline.
     const bodyShape = (p) => box(p[0] - 13, p[1] - 16, p[0] + 13, p[1] + 16);
     out.body = choose(r, [[L + 42, B - 36], [R - 42, B - 36], [L + 42, T + 60], [R - 42, T + 60]], bodyShape, obs, 2);

@@ -229,3 +229,37 @@ test('long room names get a smaller font in narrow rooms', () => {
   assert.equal(nameFontSize(lay.rooms.n, 'Library'), 17);
   assert.ok(nameFontSize(lay.rooms.c, 'Conservatory') < 17);
 });
+
+test('hall-4: three small rooms around a hall, tokens clear of the door leaves', () => {
+  const lay = layout(plan('hall-4'));
+  assert.deepEqual(lay.viewBox, [14, 14, 372, 252]);
+  assert.deepEqual(lay.doors.map((d) => d.point), [[200, 140], [140, 200], [260, 200]]);
+  // The doors swing into the west and east rooms, so their tokens move away from the hall.
+  assert.deepEqual(lay.rooms.w.center, [74, 200]);
+  assert.deepEqual(lay.rooms.e.center, [326, 200]);
+});
+
+test('a door leaf never swings over a token, in any plan', () => {
+  for (const id of ['chain-2x2', 'ring-2x2', 'hall-5', 'hall-4']) {
+    const lay = layout(plan(id));
+    for (const d of lay.doors) {
+      const r = lay.rooms[d.into];
+      const leaf = d.vertical
+        ? { x1: Math.min(d.line, d.line + d.dir[0] * 40), y1: d.gap[0], x2: Math.max(d.line, d.line + d.dir[0] * 40), y2: d.gap[1] }
+        : { x1: d.gap[0], y1: Math.min(d.line, d.line + d.dir[1] * 40), x2: d.gap[1], y2: Math.max(d.line, d.line + d.dir[1] * 40) };
+      assert.ok(gapBetween(leaf, { cx: r.center[0], cy: r.center[1], r: TOKEN_R }) >= 0, `${id}: the door into ${d.into} swings over its token`);
+    }
+  }
+});
+
+test('in a small murder room the clock time goes beside the face, clear of the token', () => {
+  const lay = layout(plan('hall-4'));
+  const d = decorate(lay, { names: { n: 'Stage', w: 'Dressing', c: 'Green Room', e: 'Office' }, murder: 'e', markers: [{ id: 1, slot: 'e' }] });
+  assert.equal(d.clockLabel, 'left');
+  const r = lay.rooms.e, [x, y] = d.clock;
+  const clockBox = { x1: x - 54, y1: y - 14, x2: x + 15, y2: y + 14 };
+  assert.ok(gapBetween(clockBox, { cx: r.center[0], cy: r.center[1], r: TOKEN_R }) > 0);
+  assert.ok(clockBox.x1 >= r.x && clockBox.x2 <= r.x + r.w && clockBox.y1 >= r.y);
+  // Large rooms keep the time under the face, as before.
+  assert.equal(decorate(layout(plan('chain-2x2')), { names: names3, murder: 'ne', markers: [] }).clockLabel, 'below');
+});
