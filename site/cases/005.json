@@ -1,0 +1,210 @@
+{
+  "id": "005",
+  "title": "The Final Curtain",
+  "victim": "Mr. Fenwick",
+  "level": "easy",
+  "floorplan": "hall-4",
+  "rooms": [
+    {
+      "id": "Sta",
+      "name": "Stage",
+      "short": "Stage",
+      "slot": "n"
+    },
+    {
+      "id": "Dre",
+      "name": "Dressing Room",
+      "short": "Dressing",
+      "slot": "w"
+    },
+    {
+      "id": "Gre",
+      "name": "Green Room",
+      "short": "Green",
+      "slot": "c"
+    },
+    {
+      "id": "Off",
+      "name": "Office",
+      "short": "Office",
+      "slot": "e"
+    }
+  ],
+  "doors": [
+    [
+      "Gre",
+      "Sta"
+    ],
+    [
+      "Gre",
+      "Dre"
+    ],
+    [
+      "Gre",
+      "Off"
+    ]
+  ],
+  "suspects": [
+    {
+      "id": "A",
+      "name": "Lionel",
+      "role": "the agent",
+      "label": "Agent"
+    },
+    {
+      "id": "B",
+      "name": "Enzo",
+      "role": "the tenor",
+      "label": "Tenor"
+    },
+    {
+      "id": "C",
+      "name": "Pip",
+      "role": "the usher",
+      "label": "Usher"
+    },
+    {
+      "id": "D",
+      "name": "Maud",
+      "role": "the dresser",
+      "label": "Dresser"
+    }
+  ],
+  "times": [
+    "19:00",
+    "20:00",
+    "21:00"
+  ],
+  "murder": {
+    "room": "Gre",
+    "time": "20:00",
+    "device": "his pocket watch was crushed underfoot"
+  },
+  "intro": [
+    {
+      "h": "Mr. Fenwick is dead.",
+      "t": "The impresario died in the Green Room at 20:00, when his pocket watch was crushed underfoot. Whoever was in the Green Room at 20:00 is the killer."
+    },
+    {
+      "h": "Four people were backstage.",
+      "t": "Lionel the agent, Enzo the tenor, Pip the usher and Maud the dresser. After the row over the contracts nobody would share a room. Four people, four rooms: every room was taken at every hour."
+    },
+    {
+      "h": "Every door opens onto the Green Room.",
+      "t": "The clock chimes every hour. Between chimes there is only time to walk through one door, or to stay where you are. Nobody has to move. To get from one room to another, you must pass through the Green Room, where Mr. Fenwick sat. Find out who was in there with him at 20:00."
+    }
+  ],
+  "reasons": {
+    "occupied": "After the row, nobody would share a room.",
+    "far": "Every door opens onto the Green Room, and there is only time for one door per chime."
+  },
+  "clues": [
+    {
+      "id": 1,
+      "lead": "A cold cup of coffee stands on the desk.",
+      "text": "At 19:00 the agent was waiting in the Office.",
+      "hint": "Tap the Agent, then tap the Office.",
+      "marker": "Off",
+      "constraint": {
+        "type": "at",
+        "person": "A",
+        "room": "Off",
+        "time": "19:00"
+      }
+    },
+    {
+      "id": 2,
+      "lead": "The tenor sang through the interval.",
+      "text": "The tenor never left the Stage.",
+      "hint": "Place the Tenor at every hour.",
+      "marker": "Sta",
+      "constraint": {
+        "type": "notAt",
+        "person": "B",
+        "rooms": [
+          "Dre",
+          "Gre",
+          "Off"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "lead": "The costumes were still being pressed.",
+      "text": "At 19:00 the usher was not in the Dressing Room.",
+      "hint": "Two rooms and two people are left at 19:00. Which room can the Usher have?",
+      "constraint": {
+        "type": "notAt",
+        "person": "C",
+        "rooms": [
+          "Dre"
+        ],
+        "time": "19:00"
+      }
+    },
+    {
+      "id": 4,
+      "lead": "The takings were locked away at nine.",
+      "text": "At 21:00 the usher was in the Office with the cash box.",
+      "hint": "Place the Usher at 21:00. Then look at 20:00: who is the only one who can be in the Dressing Room?",
+      "marker": "Off",
+      "constraint": {
+        "type": "at",
+        "person": "C",
+        "room": "Off",
+        "time": "21:00"
+      }
+    },
+    {
+      "id": 5,
+      "lead": "A hot iron was left on the board.",
+      "text": "Between 20:00 and 21:00 the dresser changed rooms.",
+      "hint": "Where was the Dresser at 20:00? There is only one door out of that room.",
+      "constraint": {
+        "type": "moved",
+        "person": "D",
+        "from": "20:00"
+      }
+    }
+  ],
+  "solution": {
+    "A": [
+      "Off",
+      "Gre",
+      "Dre"
+    ],
+    "B": [
+      "Sta",
+      "Sta",
+      "Sta"
+    ],
+    "C": [
+      "Gre",
+      "Off",
+      "Off"
+    ],
+    "D": [
+      "Dre",
+      "Dre",
+      "Gre"
+    ]
+  },
+  "controlQuestions": [
+    {
+      "person": "C",
+      "time": "19:00"
+    }
+  ],
+  "ending": [
+    "19:00 · The usher brings Mr. Fenwick the ticket count in the Green Room. The agent waits in the Office, the dresser presses costumes, and the tenor warms up on the Stage.",
+    "The agent strides into the Green Room as the usher leaves for the Office.",
+    "20:00 · “You will never sign another singer of mine.” A pocket watch cracks underfoot. Mr. Fenwick is dead, and the agent is alone with him.",
+    "The agent ducks into the Dressing Room as the dresser comes out with an armful of costumes.",
+    "21:00 · The dresser drops the costumes and screams."
+  ],
+  "closing": "The agent was alone with Mr. Fenwick when the watch stopped.",
+  "share": {
+    "title": "The Final Curtain",
+    "number": "005"
+  }
+}
