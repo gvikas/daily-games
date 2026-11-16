@@ -6,6 +6,8 @@ import { join } from 'node:path';
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 export const CASES_DIR = join(ROOT, 'cases');
 export const FLOORPLANS_DIR = join(ROOT, 'floorplans');
+// Engine modules that play.html imports. They have no imports and are copied to site/lib/.
+export const BROWSER_LIBS = ['floorplan.js', 'conflicts.js', 'progress.js'];
 
 export const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 

@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { analyze } from '../engine/index.js';
-import { ROOT, FLOORPLANS_DIR, findCaseFile, loadFloorplan, readJson } from './lib/load.js';
+import { ROOT, FLOORPLANS_DIR, BROWSER_LIBS, findCaseFile, loadFloorplan, readJson } from './lib/load.js';
 
 const [id, date] = process.argv.slice(2);
 const fail = (msg) => { console.error(`✗ ${msg}`); process.exit(1); };
@@ -36,9 +36,9 @@ const site = join(ROOT, 'site');
 for (const dir of ['cases', 'floorplans', 'lib']) mkdirSync(join(site, dir), { recursive: true });
 writeFileSync(join(site, 'cases', `${id}.json`), JSON.stringify(data, null, 2) + '\n');
 copyFileSync(join(FLOORPLANS_DIR, `${data.floorplan}.json`), join(site, 'floorplans', `${data.floorplan}.json`));
-// The page draws the map with the same module the tests cover.
-copyFileSync(join(ROOT, 'engine', 'floorplan.js'), join(site, 'lib', 'floorplan.js'));
-console.log(`✓ site/cases/${id}.json, site/floorplans/${data.floorplan}.json, site/lib/floorplan.js`);
+// The page runs the same modules the tests cover.
+for (const lib of BROWSER_LIBS) copyFileSync(join(ROOT, 'engine', lib), join(site, 'lib', lib));
+console.log(`✓ site/cases/${id}.json, site/floorplans/${data.floorplan}.json, site/lib/{${BROWSER_LIBS.join(',')}}`);
 
 const indexFile = join(site, 'cases', 'index.json');
 let index = [];

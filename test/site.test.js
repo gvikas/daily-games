@@ -2,14 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, findCaseFile, readJson } from '../scripts/lib/load.js';
+import { ROOT, BROWSER_LIBS, findCaseFile, readJson } from '../scripts/lib/load.js';
 
 // site/ is what GitHub Pages serves. These files are copies made by `npm run publish-case`.
 const site = join(ROOT, 'site');
 const read = (f) => readFileSync(f, 'utf8');
 
-test('site/lib/floorplan.js is the tested engine/floorplan.js', () => {
-  assert.equal(read(join(site, 'lib', 'floorplan.js')), read(join(ROOT, 'engine', 'floorplan.js')), 'run npm run publish-case <id> to copy the engine again');
+test('site/lib/ holds the tested engine modules, unchanged and without imports', () => {
+  for (const lib of BROWSER_LIBS) {
+    const src = read(join(ROOT, 'engine', lib));
+    assert.doesNotMatch(src, /^\s*import\s/m, `engine/${lib} must not import anything: it runs in the browser from site/lib/`);
+    assert.ok(existsSync(join(site, 'lib', lib)), `site/lib/${lib} is missing: run npm run publish-case <id>`);
+    assert.equal(read(join(site, 'lib', lib)), src, `site/lib/${lib} is out of date: run npm run publish-case <id>`);
+  }
 });
 
 test('published cases and floor plans match their sources', () => {
