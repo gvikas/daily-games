@@ -35,6 +35,7 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - En sak som skal kunne spilles, har `floorplan` og presentasjonsfeltene (`intro`, `lead`, `hint`, `marker`, `ending`, `share`). Formatet er beskrevet i `docs/specs/done/006-data-driven-case-page.md`. `npm run solve` sjekker også disse feltene.
 - Mistenkte kan ha et kort `label` (rolle, f.eks. «Barmaid»). Når det finnes, viser `play.html` rollen i stedet for navnet på chips, brikker, notater, anklage og i hjelpetekster. Funnene bruker da rollen («the barmaid»), og navnet brukes bare i åpningsscenen og avslutningen. Saker uten `label` viser navn som før.
 - Spilleren har tre forsøk per sak. Forsøk og resultat lagres per sak i `localStorage` (`case-<id>-progress`). `play.html?case=<id>&reset` nullstiller saken, til testing. Den skal ikke lenkes til.
+- `level` (`easy`, `medium`, `hard`, `tricky`) og `twist` (`empty-room`) er valgfrie og valideres av solveren. En `tricky`-sak har nøyaktig én `twist`. Nye vrier krever kode og en egen spec.
 - Saker med id som starter på `test-`, er testsaker for hus og størrelser. De skal ikke inn i `site/cases/index.json`.
 
 ## Plantegninger

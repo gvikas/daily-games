@@ -1,6 +1,10 @@
 // Case model and validation. Pure JavaScript, no Node APIs, so it can run in the browser.
 
 export const CLUE_TYPES = ['at', 'notAt', 'swap', 'stayed', 'moved'];
+// Difficulty the author intends (spec 002). "test" is only for test cases (id "test-…").
+export const LEVELS = ['easy', 'medium', 'hard', 'tricky'];
+// Weekend twists (spec 002, part B). A tricky case has exactly one, and only a tricky case has one.
+export const TWISTS = ['empty-room'];
 const TRANSITION_TYPES = ['swap', 'stayed', 'moved'];
 const MAX_ROOMS = 30; // room sets are stored as 32-bit masks
 
@@ -60,6 +64,23 @@ export function buildModel(c) {
     if (a === b) { errors.push(`doors[${i}]: a door must join two different rooms`); return; }
     nbr[a] |= 1 << b; nbr[b] |= 1 << a;
   });
+
+  // level and twist: metadata the solver checks for consistency, but does not solve with.
+  if (c.level !== undefined) {
+    const isTest = isStr(c.id) && c.id.startsWith('test-');
+    if (!(LEVELS.includes(c.level) || (isTest && c.level === 'test'))) {
+      errors.push(`level: must be one of ${LEVELS.join(', ')}${isTest ? ', test' : ''}, not ${JSON.stringify(c.level)}`);
+    }
+  }
+  if (c.twist !== undefined) {
+    if (!TWISTS.includes(c.twist)) errors.push(`twist: unknown twist ${JSON.stringify(c.twist)} (known: ${TWISTS.join(', ')})`);
+    else if (c.level !== 'tricky') errors.push(`twist: only a "tricky" case has a twist, this case is ${JSON.stringify(c.level ?? 'without level')}`);
+    if (c.twist === 'empty-room' && R > 0 && P > 0 && P !== R - 1) {
+      errors.push(`twist "empty-room": needs exactly one room more than suspects so one room stands empty every hour (${P} suspects, ${R} rooms)`);
+    }
+  } else if (c.level === 'tricky') {
+    errors.push('level "tricky": needs a "twist" (spec 002, part B)');
+  }
 
   let murder = null;
   if (!isObj(c.murder)) errors.push('murder: must be an object with "room" and "time"');

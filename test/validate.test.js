@@ -82,3 +82,28 @@ test('a structurally broken case stops after validation', () => {
   assert.equal(r.solutionCount, null);
   assert.equal(r.ok, false);
 });
+
+// --- level and twist (spec 002, accepted in spec 006) ---
+
+test('level is optional and must be a known level; "test" only for test cases', () => {
+  for (const level of ['easy', 'medium', 'hard']) assert.deepEqual(errorsOf({ ...ok, level }), []);
+  hasError({ ...ok, level: 'expert' }, 'level: must be one of easy, medium, hard, tricky');
+  hasError({ ...ok, level: 'test' }, 'level: must be one of');
+  assert.deepEqual(errorsOf({ ...ok, id: 'test-x', level: 'test' }), []);
+});
+
+test('a tricky case has exactly one known twist, and only a tricky case has a twist', () => {
+  const empty = makeCase({ rooms: ['X', 'Y', 'Z'], suspects: ['A', 'B'], solution: { A: ['X', 'X'], B: ['Y', 'Y'] } });
+  assert.deepEqual(errorsOf({ ...empty, level: 'tricky', twist: 'empty-room' }), []);
+  hasError({ ...empty, level: 'tricky' }, 'level "tricky": needs a "twist"');
+  hasError({ ...empty, level: 'medium', twist: 'empty-room' }, 'only a "tricky" case has a twist');
+  hasError({ ...empty, twist: 'empty-room' }, 'only a "tricky" case has a twist');
+  hasError({ ...empty, level: 'tricky', twist: 'secret-door' }, 'unknown twist "secret-door"');
+});
+
+test('the empty-room twist needs exactly one room more than suspects', () => {
+  const full = makeCase({ rooms: ['X', 'Y'], suspects: ['A', 'B'], solution: { A: ['X', 'X'], B: ['Y', 'Y'] } });
+  hasError({ ...full, level: 'tricky', twist: 'empty-room' }, '2 suspects, 2 rooms');
+  const two = makeCase({ rooms: ['X', 'Y', 'Z', 'W'], suspects: ['A', 'B'], solution: { A: ['X', 'X'], B: ['Y', 'Y'] } });
+  hasError({ ...two, level: 'tricky', twist: 'empty-room' }, '2 suspects, 4 rooms');
+});
