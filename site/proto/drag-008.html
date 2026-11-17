@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily case 008 · prototype</title>
+<style>
+/* Prototype (Cowork, 2026-11-17): brikker på kartet, dra med spor, trykk som reserve, telling av metode.
+   Selvstendig fil. Saken ligger i CASE nederst. Ikke en del av spillet. */
+:root{
+  --bg:#EDF0F1; --surface:#FFFFFF; --ink:#15202A; --muted:#56636E; --line:#D2D9DE;
+  --green:#2E8654; --red:#B04536; --yellow:#C08E14;
+  --p-a:#9A5B2E; --p-b:#467A33; --p-c:#8E3F78; --p-d:#36598C;
+  --f:"Segoe UI",system-ui,-apple-system,sans-serif; --mono:ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.app{max-width:520px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 16px 24px;display:flex;flex-direction:column;gap:10px;min-height:100dvh}
+.top{display:flex;align-items:center;gap:8px}
+.top h1{font-size:1.1rem;margin:0;flex:1}
+.status{font:500 .8rem var(--mono);color:var(--muted)}
+.hours{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.hour{border:0;background:transparent;border-radius:7px;padding:8px 0;font:500 .9rem var(--mono);cursor:pointer}
+.hour small{font-size:.7rem;opacity:.65;margin-left:4px}
+.hour[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.map svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none}
+.floor{fill:var(--surface)}
+.room-hit{fill:transparent}
+.room-hit.ok{fill:rgba(46,134,84,.10)}
+.room-hit.no{fill:rgba(21,32,42,.06)}
+.wall{stroke:var(--ink);stroke-width:4;fill:none;stroke-linecap:square}
+.doorgap{stroke:var(--surface);stroke-width:6}
+.door{stroke:var(--green);stroke-width:2;stroke-dasharray:3 3}
+.rname{font:700 11px var(--f);fill:var(--ink)}
+.wait{fill:#F5F7F8;stroke:var(--line);stroke-dasharray:4 3}
+.wait-label{font:500 9px var(--mono);fill:var(--muted)}
+.tok rect{stroke-width:2}
+.tok text{font:700 10px var(--f);fill:#fff;pointer-events:none}
+.tok{cursor:grab}
+.tok.ghost rect{fill:#fff!important;stroke-dasharray:3 2}
+.tok.ghost text{fill:var(--muted)}
+.tok.sel rect{stroke:var(--ink)!important;stroke-width:3}
+.tok.dragging{opacity:.85;cursor:grabbing}
+.trail{fill:none;stroke-width:3;stroke-linecap:round;opacity:.75}
+.trail.live{stroke-dasharray:4 4}
+.marker{fill:none;stroke:var(--yellow);stroke-width:3}
+.msg{min-height:1.4em;font-size:.9rem;color:var(--muted)}
+.msg.bad{color:var(--red)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:1.05rem;margin:0}
+.clue{border-left:4px solid var(--line);padding:4px 0 4px 10px}
+.clue .lead{font-size:.8rem;color:var(--muted)}
+.clue.new{border-color:var(--green)}
+.clue.bad{border-color:var(--red)}
+.clue.bad .text::after{content:"  ✕ Your board breaks this.";color:var(--red);font-size:.8rem}
+.hint{font-size:.85rem;color:var(--muted);font-style:italic}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:10px;padding:11px 14px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.choice{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;cursor:pointer}
+.choice[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stats{font:500 .85rem var(--mono);color:var(--muted);white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top"><h1 id="title"></h1><span class="status" id="status"></span></div>
+  <div class="hours" id="hours"></div>
+  <div class="map"><svg id="svg" viewBox="0 0 300 250" aria-label="Floor plan"></svg></div>
+  <div class="msg" id="msg"></div>
+
+  <div class="panel" id="introPanel">
+    <h2 id="introH"></h2><p id="introT"></p>
+    <div class="row"><button class="btn" id="introNext">Next</button></div>
+  </div>
+
+  <div class="panel" id="playPanel" hidden>
+    <div id="clues"></div>
+    <div class="row">
+      <button class="btn" id="nextClue">Show next clue</button>
+      <button class="btn sec" id="hintBtn">Hint</button>
+      <button class="btn sec" id="accuseBtn" hidden>Accuse</button>
+    </div>
+    <p class="hint" id="hint" hidden></p>
+  </div>
+
+  <div class="panel" id="accusePanel" hidden>
+    <h2 id="accQ1"></h2><div class="row" id="accWho"></div>
+    <h2 id="accQ2"></h2><div class="row" id="accWhere"></div>
+    <div class="row"><button class="btn" id="accGo">Accuse</button><button class="btn sec" id="accBack">Back to the map</button></div>
+    <p class="msg" id="accMsg"></p>
+  </div>
+
+  <div class="panel" id="endPanel" hidden>
+    <h2 id="verdict"></h2>
+    <p id="endText"></p>
+    <div class="row"><button class="btn" id="endNext">Next</button></div>
+    <div class="stats" id="stats"></div>
+    <div class="row"><button class="btn sec" id="copyBtn">Copy result</button></div>
+  </div>
+</div>
+
+<script>
+const CASE = {
+  id:"008", title:"The Cold Tea",
+  rooms:[
+    {id:"Hal",name:"Hall",   x:0,  y:0,  w:100,h:200},
+    {id:"Lou",name:"Lounge", x:100,y:0,  w:200,h:100},
+    {id:"Kit",name:"Kitchen",x:200,y:100,w:100,h:100},
+    {id:"Off",name:"Office", x:100,y:100,w:100,h:100}
+  ],
+  // dører: rompar og punktet der døren står
+  doors:[
+    {a:"Hal",b:"Lou",x:100,y:50, v:true},
+    {a:"Lou",b:"Kit",x:250,y:100,v:false},
+    {a:"Kit",b:"Off",x:200,y:150,v:true},
+    {a:"Off",b:"Hal",x:100,y:150,v:true}
+  ],
+  suspects:[
+    {id:"A",label:"Guest", color:"var(--p-a)"},
+    {id:"B",label:"Waiter",color:"var(--p-b)"},
+    {id:"C",label:"Doctor",color:"var(--p-c)"},
+    {id:"D",label:"Nephew",color:"var(--p-d)"}
+  ],
+  times:["20:00","21:00","22:00"],
+  murder:{room:"Off",time:1},
+  intro:[
+    {h:"Mrs. Bell is dead.",t:"The owner of the guesthouse died in the Office. The office clock fell and stopped at 21:00. Whoever was in the Office at 21:00 is the killer."},
+    {h:"Four people were in the house.",t:"The guest, the waiter, the doctor and the nephew. Four people, four rooms: at every hour every room was taken, and nobody shared a room."},
+    {h:"The map shows one moment at a time.",t:"At 20:00, at 21:00 and at 22:00, everyone stood in a room. Between two of these moments a person can walk through one door, or stay in the same room. The rooms go round in a ring: the Lounge and the Office have no door between them."},
+    {h:"Move people on the map.",t:"Drag a person into a room. Or tap the person, then tap the room. When you go to the next hour, everyone starts where they were, shown faded. Drag them on, or tap them twice to say they stayed."}
+  ],
+  clues:[
+    {lead:"There is fresh coffee in the Kitchen.",text:"At 20:00 the waiter was in the Kitchen.",hint:"Drag the Waiter into the Kitchen at 20:00.",marker:"Kit",c:{type:"at",p:"B",r:"Kit",t:0}},
+    {lead:"The doctor kept away from Mrs. Bell.",text:"The doctor was never in the Hall and never in the Office.",hint:"Two rooms are left for the Doctor. At 20:00 one of them is taken.",c:{type:"notAt",p:"C",rooms:["Hal","Off"]}},
+    {lead:"The Hall was dark at 20:00.",text:"At 20:00 the nephew was not in the Hall.",hint:"Two rooms are left at 20:00. Which one is the Nephew's?",c:{type:"notAt",p:"D",rooms:["Hal"],t:0}},
+    {lead:"Someone washed a cup in the Kitchen.",text:"At 22:00 the nephew was in the Kitchen.",hint:"Go to 22:00 and place the Nephew. Where can the Doctor be at 22:00?",marker:"Kit",c:{type:"at",p:"D",r:"Kit",t:2}},
+    {lead:"The guest could not sit still.",text:"At 22:00 the guest was in a different room than at 21:00.",hint:"Look at 21:00 and 22:00 together. Where can the Guest go?",c:{type:"moved",p:"A",t:1}},
+    {lead:"They passed each other in a doorway.",text:"The waiter and the doctor swapped rooms. At 21:00 each of them stood where the other had stood at 20:00.",hint:"Where was the Doctor at 20:00? The Waiter stood there at 21:00.",c:{type:"swap",a:"B",b:"C",t:0}}
+  ],
+  solution:{A:["Hal","Hal","Off"],B:["Kit","Lou","Hal"],C:["Lou","Kit","Lou"],D:["Off","Off","Kit"]},
+  control:{p:"A",t:2},
+  ending:[
+    "20:00 · The guest waits in the Hall. The waiter makes coffee in the Kitchen, and the doctor reads in the Lounge. The nephew is in the Office with Mrs. Bell.",
+    "The waiter and the doctor swap rooms. The others stay where they are.",
+    "21:00 · “You get nothing,” says Mrs. Bell. The office clock falls and stops. Mrs. Bell is dead, and the nephew is alone with her.",
+    "The nephew hurries into the Kitchen, and the guest walks into the Office. The doctor goes back to the Lounge, and the waiter walks on into the Hall.",
+    "22:00 · The guest finds Mrs. Bell on the Office floor. Her tea is cold. The nephew was alone with Mrs. Bell when the clock stopped."
+  ]
+};
+
+// ---------- tilstand ----------
+const $ = id => document.getElementById(id);
+const T = CASE.times.length, P = CASE.suspects.map(s=>s.id);
+const ROOM = Object.fromEntries(CASE.rooms.map(r=>[r.id,r]));
+const SUS = Object.fromEntries(CASE.suspects.map(s=>[s.id,s]));
+const ADJ = {}; CASE.rooms.forEach(r=>ADJ[r.id]=new Set([r.id])); CASE.doors.forEach(d=>{ADJ[d.a].add(d.b);ADJ[d.b].add(d.a)});
+const doorOf = (a,b) => CASE.doors.find(d=>(d.a===a&&d.b===b)||(d.a===b&&d.b===a));
+let place = Array.from({length:T},()=>({}));   // place[t][p] = rom
+let hour = 0, shown = 0, introStep = 0, sel = null, attempts = 0, done = false, endStep = -1;
+const stats = {drag:0, tap:0, stay:0, rejected:0, undoToWaiting:0, hints:0, start:null, end:null};
+const WAIT = {x:0,y:205,w:300,h:45};
+
+// ---------- tegning ----------
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs={}, parent) => { const e=document.createElementNS(NS,tag); for (const k in attrs) e.setAttribute(k,attrs[k]); if (parent) parent.appendChild(e); return e; };
+const center = r => ({x:ROOM[r].x+ROOM[r].w/2, y:ROOM[r].y+ROOM[r].h/2+6});
+
+function slotPos(room, i, n){
+  const r = ROOM[room], c = center(room);
+  if (n<=1) return c;
+  const wide = r.w > r.h;
+  const off = (i-(n-1)/2)*(wide?62:28);
+  return wide ? {x:c.x+off, y:c.y} : {x:c.x, y:c.y+off};
+}
+
+function view(t){ // hva som vises i time t: faste brikker og skygger ført videre
+  const solid = place[t], items = [];
+  const byRoom = {};
+  for (const p of P){
+    let r = solid[p], ghost = false;
+    if (!r && !done){ for (let k=t-1;k>=0;k--) if (place[k][p]){ r=place[k][p]; ghost=true; break; } }
+    if (r){ (byRoom[r] ||= []).push({p,ghost}); } else items.push({p,wait:true});
+  }
+  for (const r in byRoom){ const list = byRoom[r].sort((a,b)=>a.ghost-b.ghost); list.forEach((it,i)=>items.push({...it,room:r,pos:slotPos(r,i,list.length)})); }
+  const waiting = items.filter(i=>i.wait); waiting.forEach((it,i)=>{ it.pos={x:40+i*70,y:WAIT.y+27}; });
+  return items;
+}
+
+function trailPath(from,to){
+  const a=center(from), b=center(to), d=doorOf(from,to);
+  if (!d) return `M${a.x},${a.y} L${b.x},${b.y}`;
+  // to som bytter rom, får hver sin bue, slik at begge sporene synes
+  const k = from < to ? 7 : -7, nx = d.v ? 0 : k, ny = d.v ? k : 0;
+  return `M${a.x},${a.y} Q${d.x+nx},${d.y+ny} ${b.x},${b.y}`;
+}
+
+function draw(live){
+  const svg=$("svg"); svg.innerHTML="";
+  const okRooms = live ? allowed(live.p, hour) : null;
+  for (const r of CASE.rooms){
+    el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,class:"floor"},svg);
+  }
+  for (const r of CASE.rooms){
+    const cls = okRooms ? (okRooms.has(r.id)?"room-hit ok":"room-hit no") : "room-hit";
+    el("rect",{x:r.x+2,y:r.y+2,width:r.w-4,height:r.h-4,class:cls,"data-room":r.id},svg);
+    el("rect",{x:r.x+2,y:r.y+2,width:r.w-4,height:r.h-4,class:"wall"},svg);
+    const tx=el("text",{x:r.x+9,y:r.y+17,class:"rname"},svg); tx.textContent=r.name;
+  }
+  for (const d of CASE.doors){
+    const L=10;
+    const a = d.v ? [d.x,d.y-L,d.x,d.y+L] : [d.x-L,d.y,d.x+L,d.y];
+    el("line",{x1:a[0],y1:a[1],x2:a[2],y2:a[3],class:"doorgap"},svg);
+    el("line",{x1:a[0],y1:a[1],x2:a[2],y2:a[3],class:"door"},svg);
+  }
+  // markør for siste funn
+  const last = CASE.clues[shown-1];
+  if (last && last.marker && !done){ const r=ROOM[last.marker]; el("rect",{x:r.x+5,y:r.y+5,width:r.w-10,height:r.h-10,rx:6,class:"marker"},svg); }
+  // venteområde
+  el("rect",{x:WAIT.x+2,y:WAIT.y,width:WAIT.w-4,height:WAIT.h-3,rx:8,class:"wait"},svg);
+  el("text",{x:10,y:WAIT.y+11,class:"wait-label"},svg).textContent = done ? "" : "NOT PLACED YET · drag back here to clear";
+  // spor fra timen før
+  if (hour>0) for (const p of P){
+    const a=place[hour-1][p], b=place[hour][p];
+    if (a && b && a!==b) el("path",{d:trailPath(a,b),class:"trail",stroke:SUS[p].color},svg);
+  }
+  if (live && live.from && live.pt) el("path",{d:`M${center(live.from).x},${center(live.from).y} L${live.pt.x},${live.pt.y}`,class:"trail live",stroke:SUS[live.p].color},svg);
+  // brikker
+  for (const it of view(hour)){
+    if (live && live.p===it.p && live.pt) continue;
+    token(svg,it.p,it.pos,it.ghost);
+  }
+  if (live && live.pt) token(svg,live.p,live.pt,false,true);
+  svg.querySelectorAll(".wall,.door,.doorgap,.rname,.trail,.marker,.wait-label").forEach(n=>n.style.pointerEvents="none");
+}
+
+function token(svg,p,pos,ghost,dragging){
+  const g=el("g",{class:"tok"+(ghost?" ghost":"")+(sel===p?" sel":"")+(dragging?" dragging":""),"data-p":p,transform:`translate(${pos.x},${pos.y})`},svg);
+  el("rect",{x:-27,y:-11,width:54,height:22,rx:11,fill:SUS[p].color,stroke:SUS[p].color},g);
+  el("text",{x:0,y:4,"text-anchor":"middle"},g).textContent=SUS[p].label;
+}
+
+// ---------- regler ----------
+function allowed(p,t){ // rom p kan stå i ved time t, gitt naboene som er plassert
+  const s=new Set(CASE.rooms.map(r=>r.id));
+  for (const k of [t-1,t+1]) if (k>=0 && k<T && place[k][p]) for (const r of [...s]) if (!ADJ[place[k][p]].has(r)) s.delete(r);
+  return s;
+}
+
+function say(text,bad){ const m=$("msg"); m.textContent=text||""; m.className="msg"+(bad?" bad":""); }
+
+function setRoom(p,room,how){
+  if (done) return;
+  if (!stats.start) stats.start=Date.now();
+  const t=hour, prev=place[t][p] || null;
+  if (room===null){ delete place[t][p]; stats.undoToWaiting++; after(); return; }
+  if (!allowed(p,t).has(room)){ stats.rejected++; say(SUS[p].label+": "+"between two hours a person can only walk through one door.",true); draw(); return; }
+  const other = P.find(q=>q!==p && place[t][q]===room);
+  if (other){
+    // bytt plass: den andre går dit p sto (eller til venteområdet)
+    if (prev && !allowed(other,t).has(prev)){ stats.rejected++; say("Nobody shared a room, and the "+SUS[other].label.toLowerCase()+" cannot reach the "+ROOM[prev].name+".",true); draw(); return; }
+    if (prev) place[t][other]=prev; else delete place[t][other];
+  }
+  const wasGhost = !place[t][p];
+  place[t][p]=room;
+  const prevHourRoom = t>0 ? place[t-1][p] : null;
+  if (prevHourRoom===room && wasGhost && how!=="drag-stay") stats.stay++;
+  if (how==="drag") stats.drag++; else if (how==="tap") stats.tap++;
+  say(other ? SUS[p].label+" and "+SUS[other].label+" swapped rooms on your board." : "");
+  after();
+}
+
+function after(){ sel=null; renderHours(); renderClues(); draw(); save(); }
+
+// ---------- peker: dra eller trykk ----------
+let drag=null;
+function svgPt(e){ const svg=$("svg"), pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+function roomAt(pt){ if (pt.y>=WAIT.y) return "WAIT"; const r=CASE.rooms.find(r=>pt.x>=r.x&&pt.x<=r.x+r.w&&pt.y>=r.y&&pt.y<=r.y+r.h); return r?r.id:null; }
+
+$("svg").addEventListener("pointerdown",e=>{
+  if (done || $("playPanel").hidden) return;
+  const g=e.target.closest(".tok"); const pt=svgPt(e);
+  if (g){ const p=g.dataset.p; drag={p,x0:e.clientX,y0:e.clientY,moved:false,from:hour>0?place[hour-1][p]:null,pt:null}; $("svg").setPointerCapture(e.pointerId); return; }
+  const r=roomAt(pt);
+  if (sel && r){ setRoom(sel, r==="WAIT"?null:r, "tap"); }
+});
+$("svg").addEventListener("pointermove",e=>{
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6) return;
+  drag.moved=true; drag.pt=svgPt(e); sel=null; draw(drag);
+});
+$("svg").addEventListener("pointerup",e=>{
+  if (!drag) return; const d=drag; drag=null;
+  if (d.moved){ const r=roomAt(svgPt(e)); if (r) setRoom(d.p, r==="WAIT"?null:r, "drag"); else draw(); return; }
+  // trykk på en brikke: velg den. Trykk på en valgt skygge: den ble stående.
+  const ghost = !place[hour][d.p] && hour>0 && place[hour-1][d.p];
+  if (sel && sel!==d.p){ const r=roomAt(svgPt(e)); if (r){ setRoom(sel, r==="WAIT"?null:r, "tap"); return; } }
+  if (sel===d.p && ghost){ setRoom(d.p, place[hour-1][d.p], "tap"); return; }
+  sel = sel===d.p ? null : d.p;
+  say(sel ? "Now tap a room for the "+SUS[sel].label.toLowerCase()+(ghost?", or tap the faded token again if they stayed.":"."):"");
+  draw();
+});
+$("svg").addEventListener("pointercancel",()=>{ drag=null; draw(); });
+
+// ---------- timer, funn, konflikter ----------
+function renderHours(){
+  const h=$("hours"); h.innerHTML="";
+  CASE.times.forEach((tm,t)=>{
+    const b=document.createElement("button"); b.className="hour"; b.setAttribute("aria-pressed",t===hour);
+    b.innerHTML=tm+`<small>${Object.keys(place[t]).length}/${P.length}</small>`;
+    b.onclick=()=>{ hour=t; sel=null; say(""); renderHours(); draw(); };
+    h.appendChild(b);
+  });
+}
+function breaks(c){
+  const at=(p,t)=>place[t][p];
+  switch(c.type){
+    case "at": return at(c.p,c.t) && at(c.p,c.t)!==c.r;
+    case "notAt": return (c.t===undefined?[...Array(T).keys()]:[c.t]).some(t=>at(c.p,t)&&c.rooms.includes(at(c.p,t)));
+    case "moved": return at(c.p,c.t)&&at(c.p,c.t+1)&&at(c.p,c.t)===at(c.p,c.t+1);
+    case "swap": { const a0=at(c.a,c.t),a1=at(c.a,c.t+1),b0=at(c.b,c.t),b1=at(c.b,c.t+1);
+      return (a1&&b0&&a1!==b0)||(b1&&a0&&b1!==a0)||(a0&&a1&&a0===a1)||(b0&&b1&&b0===b1); }
+  }
+  return false;
+}
+function renderClues(){
+  const box=$("clues"); box.innerHTML="";
+  CASE.clues.slice(0,shown).forEach((c,i)=>{
+    const d=document.createElement("div"); d.className="clue"+(i===shown-1?" new":"")+(breaks(c.c)?" bad":"");
+    d.innerHTML=`<div class="lead">${i+1}. ${c.lead}</div><div class="text">${c.text}</div>`; box.prepend(d);
+  });
+  $("nextClue").hidden = shown>=CASE.clues.length;
+  $("accuseBtn").hidden = shown<CASE.clues.length;
+  $("hint").hidden=true;
+  $("status").textContent = `Clue ${shown}/${CASE.clues.length} · ${3-attempts} tries left`;
+}
+$("nextClue").onclick=()=>{ if (!stats.start) stats.start=Date.now(); shown++; renderClues(); draw(); };
+$("hintBtn").onclick=()=>{ const c=CASE.clues[shown-1]; if(!c) return; stats.hints++; $("hint").textContent=c.hint; $("hint").hidden=false; };
+
+// ---------- intro ----------
+function showIntro(){ const s=CASE.intro[introStep]; $("introH").textContent=s.h; $("introT").textContent=s.t; $("introNext").textContent = introStep===CASE.intro.length-1?"Start":"Next"; }
+$("introNext").onclick=()=>{ introStep++; if (introStep<CASE.intro.length) return showIntro(); $("introPanel").hidden=true; $("playPanel").hidden=false; shown=1; stats.start=Date.now(); renderClues(); draw(); };
+
+// ---------- anklage ----------
+let accWho=null, accWhere=null;
+function choices(box,list,get,setv){ box.innerHTML=""; list.forEach(([id,label])=>{ const b=document.createElement("button"); b.className="choice"; b.textContent=label; b.setAttribute("aria-pressed",get()===id); b.onclick=()=>{ setv(id); choices(box,list,get,setv); }; box.appendChild(b); }); }
+$("accuseBtn").onclick=()=>{
+  $("playPanel").hidden=true; $("accusePanel").hidden=false;
+  $("accQ1").textContent=`Who was in the ${ROOM[CASE.murder.room].name} at ${CASE.times[CASE.murder.time]}?`;
+  $("accQ2").textContent=`Where was the ${SUS[CASE.control.p].label.toLowerCase()} at ${CASE.times[CASE.control.t]}?`;
+  choices($("accWho"),CASE.suspects.map(s=>[s.id,s.label]),()=>accWho,v=>accWho=v);
+  choices($("accWhere"),CASE.rooms.map(r=>[r.id,r.name]),()=>accWhere,v=>accWhere=v);
+  $("accMsg").textContent=`${3-attempts} tries left.`;
+};
+$("accBack").onclick=()=>{ $("accusePanel").hidden=true; $("playPanel").hidden=false; };
+$("accGo").onclick=()=>{
+  if (!accWho||!accWhere){ $("accMsg").textContent="Choose a person and a room."; return; }
+  attempts++;
+  const killer=P.find(p=>CASE.solution[p][CASE.murder.time]===CASE.murder.room);
+  const ok = accWho===killer && accWhere===CASE.solution[CASE.control.p][CASE.control.t];
+  if (ok || attempts>=3) return finish(ok);
+  $("accMsg").textContent=`Not quite. ${3-attempts} ${3-attempts===1?"try":"tries"} left.`; renderClues();
+};
+
+// ---------- slutt ----------
+function finish(ok){
+  done=true; if(!stats.end) stats.end=Date.now(); stats.solved=ok;
+  place = CASE.times.map((_,t)=>Object.fromEntries(P.map(p=>[p,CASE.solution[p][t]])));
+  $("accusePanel").hidden=true; $("endPanel").hidden=false;
+  $("verdict").textContent = ok ? "Case closed." : "Case unsolved.";
+  endStep=-1; $("endText").textContent = ok ? "You found the killer. See what happened." : "Here is what happened.";
+  $("endNext").hidden=false; showStats(); save();
+}
+$("endNext").onclick=()=>{
+  endStep++; if (endStep>=CASE.ending.length){ $("endNext").hidden=true; return; }
+  hour = Math.min(T-1, Math.ceil(endStep/2)); renderHours(); draw();
+  $("endText").textContent=CASE.ending[endStep];
+  if (endStep===CASE.ending.length-1) $("endNext").hidden=true;
+};
+function fmt(ms){ const s=Math.round(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function resultText(){
+  return `Daily case ${CASE.id} · prototype\n${stats.solved?"Solved":"Not solved"} · try ${attempts} of 3 · ${fmt(stats.end-stats.start)}\nMoves: ${stats.drag} drag · ${stats.tap} tap · ${stats.stay} stayed\nBlocked: ${stats.rejected} · hints: ${stats.hints}`;
+}
+function showStats(){ $("stats").textContent=resultText(); }
+$("copyBtn").onclick=()=>{ const t=resultText(); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$("copyBtn").textContent="Copied").catch(()=>{ $("stats").textContent=t; }); };
+
+// ---------- lagring per nettleser (bekvemmelighet) ----------
+const KEY="proto-drag-"+CASE.id;
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({place,shown,attempts,stats,done})); }catch(e){} }
+function load(){
+  if (location.search.includes("reset")) { try{localStorage.removeItem(KEY)}catch(e){} return; }
+  try{ const s=JSON.parse(localStorage.getItem(KEY)); if(!s) return; if (s.done){ Object.assign(stats,s.stats); attempts=s.attempts; finish(s.stats.solved); return true; }
+    place=s.place; shown=s.shown; attempts=s.attempts; Object.assign(stats,s.stats); if (shown>0){ $("introPanel").hidden=true; $("playPanel").hidden=false; } }catch(e){}
+}
+
+$("title").textContent=CASE.title;
+if (!load()){ renderHours(); showIntro(); renderClues(); draw(); }
+else { renderHours(); if (!done) renderClues(); draw(); }
+</script>
+</body>
+</html>
