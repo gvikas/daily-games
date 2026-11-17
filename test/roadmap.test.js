@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, collect, renderPage, esc, txt, gateSummary, activeGateId, RoadmapError } from '../scripts/lib/roadmap.js';
+import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, parseProposals, collect, renderPage, esc, txt, gateSummary, activeGateId, RoadmapError } from '../scripts/lib/roadmap.js';
 
 // Every test builds its own folder. Nothing here reads docs/, which is outside git.
 function fixture(files) {
@@ -218,4 +218,77 @@ test('the three-part bar has one part per status that occurs', () => {
     assert.match(bar, /tb-unknown/);
     assert.match(bar, /aria-label="1 oppfylt · 1 ikke oppfylt · 1 ikke målt"/);
   });
+});
+
+// --- Til sparring (forslag-til-sparring.md) ---
+
+const SPARRING = [
+  '# Forslag til sparring',
+  '',
+  '## Format',
+  'Hvert forslag er en overskrift med en statuslinje rett under:',
+  '',
+  '    ## Tittel',
+  '    Status: åpen · Økt 3 · Fra 2026-11-12',
+  '',
+  '## Kart eller tabell',
+  'Status: åpen · Økt 3 · Fra 2026-11-16 · Står i openDecisions · Diskuteres med spec 007',
+  'Brødtekst som ikke skal vises.',
+  '',
+  '## Siste time gitt',
+  'Status: venter · Økt 2 · Fra 2026-11-12 · Venter på nye testere',
+  '',
+  '## Resultatet som score',
+  'Status: åpen · Økt 2 · Fra 2026-11-16',
+  '',
+  '## Uten økt',
+  'Status: åpen · Fra 2026-11-16',
+  '',
+  '## Skrivefeil i status',
+  'Status: åpent · Økt 2 · Fra 2026-11-16',
+  '',
+  '## Mål løst',
+  'Status: gjennomført · Fra 2026-11-12 · Spec 008',
+  '',
+  '## Kryptering',
+  'Status: lagt bort · Fra 2026-11-06',
+  '',
+  '## Statuslinjen er ikke rett under',
+  '',
+  'Status: åpen · Økt 2 · Fra 2026-11-16',
+].join('\n');
+
+test('proposals: a "## " line with "Status: " right under it; fields split by " · "', () => {
+  const { proposals, warnings } = parseProposals(SPARRING);
+  assert.deepEqual(proposals.map((p) => p.title), ['Kart eller tabell', 'Siste time gitt', 'Resultatet som score', 'Uten økt', 'Skrivefeil i status', 'Mål løst', 'Kryptering']);
+  assert.deepEqual(proposals[0], { title: 'Kart eller tabell', status: 'åpen', session: 3, from: '2026-11-16', ref: 'Står i openDecisions · Diskuteres med spec 007' });
+  assert.deepEqual(proposals[2], { title: 'Resultatet som score', status: 'åpen', session: 2, from: '2026-11-16', ref: null });
+  assert.equal(proposals[5].session, null);
+  assert.equal(proposals[6].status, 'lagt bort');
+  assert.equal(warnings.length, 2);
+  assert.match(warnings[0], /«Uten økt».*ingen «Økt N»/);
+  assert.match(warnings[1], /«Skrivefeil i status».*ukjent status «åpent»/);
+});
+
+test('the sparring section shows open and waiting proposals by increment, after open decisions', () => {
+  const file = SPARRING + '\n\n## Langt frem\nStatus: åpen · Økt 9 · Fra 2026-11-16\n';
+  withRoot(base({}, { 'docs/design/forslag-til-sparring.md': file }), (root) => {
+    const model = collect(root);
+    assert.ok(model.sparring.warnings.some((w) => /«Langt frem»: Økt 9 finnes ikke/.test(w)), 'an increment that is not in roadmap.json gives a warning');
+    const html = renderPage(model);
+    assert.match(html, /<h2>Til sparring<\/h2>/);
+    assert.ok(html.indexOf('Åpne beslutninger') < html.indexOf('Til sparring'), 'placed after open decisions');
+    assert.match(html, /5 åpne eller ventende, 2 avgjort/);
+    assert.match(html, /href="design\/forslag-til-sparring.md"/);
+    assert.match(html, /<h3>Inkrement 2 · Second <span class="count">2<\/span><\/h3>/);
+    assert.match(html, /<h3>Inkrement 3 · Third/);
+    assert.match(html, /<h3>Inkrement 9 <span class="count">1/, 'an unknown increment is shown by number');
+    assert.match(html, /<h3>Uten inkrement/);
+    assert.ok(html.indexOf('Inkrement 2 · Second <span') < html.indexOf('Inkrement 3 · Third <span'), 'groups in increment order');
+    assert.match(html, /<li class="waiting"><span>Siste time gitt <span class="tag">VENTER<\/span><\/span><span class="small muted">Venter på nye testere<\/span>/);
+    assert.match(html, /Står i openDecisions · Diskuteres med spec 007/);
+    assert.doesNotMatch(html, /Brødtekst/);
+    assert.doesNotMatch(html, /Mål løst|Kryptering|Skrivefeil i status/, 'decided and unknown proposals are not listed');
+  });
+  withRoot(base(), (root) => assert.doesNotMatch(renderPage(collect(root)), /Til sparring/, 'no file, no section'));
 });

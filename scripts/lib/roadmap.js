@@ -96,13 +96,58 @@ export function readDecisions(file, n = 8) {
   });
 }
 
+export const PROPOSAL_STATUSES = ['åpen', 'venter', 'vedtatt', 'gjennomført', 'lagt bort'];
+const SHOWN = ['åpen', 'venter'];
+
+/**
+ * Proposals in docs/design/forslag-til-sparring.md. A proposal is a "## " line with a "Status: " line
+ * right under it: "Status: status · Økt N · Fra YYYY-MM-DD · optional reference · …".
+ * Headings without a status line, and indented lines, are not proposals.
+ * Returns { proposals: [{ title, status, session, from, ref }], warnings }.
+ */
+export function parseProposals(text) {
+  const lines = String(text).split(/\r?\n/);
+  const proposals = [], warnings = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (!/^## /.test(lines[i]) || !/^Status: /.test(lines[i + 1])) continue;
+    const title = lines[i].slice(3).trim();
+    const [status = '', ...fields] = lines[i + 1].slice(8).split(' · ').map((x) => x.trim());
+    let session = null, from = null;
+    const refs = [];
+    for (const f of fields) {
+      const okt = f.match(/^Økt (\d+)$/), fra = f.match(/^Fra (\d{4}-\d{2}-\d{2})$/);
+      if (okt && session === null) session = Number(okt[1]);
+      else if (fra && from === null) from = fra[1];
+      else if (f) refs.push(f);
+    }
+    const p = { title, status, session, from, ref: refs.join(' · ') || null };
+    if (!PROPOSAL_STATUSES.includes(status)) warnings.push(`forslag «${title}»: ukjent status «${status}» (kjente: ${PROPOSAL_STATUSES.join(', ')})`);
+    else if (SHOWN.includes(status) && session === null) warnings.push(`forslag «${title}»: status ${status}, men ingen «Økt N»`);
+    proposals.push(p);
+  }
+  return { proposals, warnings };
+}
+
+/** docs/design/forslag-til-sparring.md, or null when the file is missing. */
+export function readProposals(file) {
+  if (!existsSync(file)) return null;
+  return parseProposals(readFileSync(file, 'utf8'));
+}
+
 /** Everything the page shows. root holds docs/, cases/ and site/. */
 export function collect(root, { git = null, now = new Date() } = {}) {
   const roadmap = readRoadmap(join(root, 'docs', 'roadmap.json'));
   const specs = readSpecs(join(root, 'docs', 'specs'));
   const { cases, warnings } = readCases(join(root, 'cases'), join(root, 'site', 'cases', 'index.json'));
   const decisions = readDecisions(join(root, 'docs', 'design', 'decisions.md'));
-  return { roadmap, specs, cases, warnings, decisions, git, now };
+  const sparring = readProposals(join(root, 'docs', 'design', 'forslag-til-sparring.md'));
+  if (sparring) {
+    const ids = new Set((Array.isArray(roadmap.increments) ? roadmap.increments : []).filter(isObj).map((i) => Number(i.id)));
+    for (const p of sparring.proposals) {
+      if (SHOWN.includes(p.status) && p.session !== null && !ids.has(p.session)) sparring.warnings.push(`forslag «${p.title}»: Økt ${p.session} finnes ikke i roadmap.json`);
+    }
+  }
+  return { roadmap, specs, cases, warnings, decisions, sparring, git, now };
 }
 
 // --- Page ------------------------------------------------------------------------------------
@@ -169,7 +214,7 @@ function section(eyebrow, title, body, intro = '') {
 }
 
 export function renderPage(model) {
-  const { roadmap: r, specs, cases, warnings, decisions, git, now } = model;
+  const { roadmap: r, specs, cases, warnings, decisions, sparring, git, now } = model;
   const incs = Array.isArray(r.increments) ? r.increments.filter(isObj) : [];
   const gates = Array.isArray(r.gates) ? r.gates.filter(isObj) : [];
   const gateById = Object.fromEntries(gates.map((g) => [g.id, g]));
@@ -280,7 +325,29 @@ export function renderPage(model) {
     out.push(section(`${num()} · Åpent`, 'Åpne beslutninger', `<ul class="open card">${r.openDecisions.map((d) => `<li>${txt(d)}</li>`).join('')}</ul>`));
   }
 
-  // 10. Background
+  // 10. Proposals for sparring: open and waiting, grouped by increment. Title and reference only.
+  if (sparring) {
+    const shown = sparring.proposals.filter((p) => SHOWN.includes(p.status));
+    const decided = sparring.proposals.filter((p) => PROPOSAL_STATUSES.includes(p.status) && !SHOWN.includes(p.status)).length;
+    const groups = new Map();
+    for (const p of [...shown].sort((a, b) => (a.session ?? Infinity) - (b.session ?? Infinity))) {
+      const k = p.session ?? 'none';
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(p);
+    }
+    const head = (k) => {
+      if (k === 'none') return 'Uten inkrement';
+      const inc = incs.find((i) => Number(i.id) === k);
+      return `Inkrement ${esc(k)}${inc ? ` · ${esc(inc.title)}` : ''}`;
+    };
+    const body = groups.size
+      ? `<div class="grid g2 sparring">${[...groups].map(([k, ps]) => `<div class="card"><h3>${head(k)} <span class="count">${ps.length}</span></h3><ul class="proposals">${ps.map((p) => `<li class="${p.status === 'venter' ? 'waiting' : ''}"><span>${txt(p.title)}${p.status === 'venter' ? ' <span class="tag">VENTER</span>' : ''}</span>${p.ref ? `<span class="small muted">${txt(p.ref)}</span>` : ''}</li>`).join('')}</ul></div>`).join('')}</div>`
+      : '<p class="small muted">Ingen åpne forslag.</p>';
+    out.push(section(`${num()} · Sparring`, 'Til sparring', body,
+      `${shown.length} åpne eller ventende, ${decided} avgjort. Begrunnelsene står i <a href="design/forslag-til-sparring.md"><code>forslag-til-sparring.md</code></a>.`));
+  }
+
+  // 11. Background
   if (isObj(r.background) && r.background.file) {
     out.push(`<p class="background"><a href="${esc(r.background.file)}">${esc(r.background.label || r.background.file)} →</a></p>`);
   }
@@ -463,6 +530,11 @@ tbody th{font-family:var(--f-mono);font-weight:600;font-size:13px;white-space:no
 .decisions li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:14px;line-height:1.45}
 .decisions li:first-child{border-top:0}
 .ddate{color:var(--blood);padding-top:1px}
+.sparring{align-items:start}
+.proposals{margin:0;padding:0;list-style:none}
+.proposals li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--line)}
+.proposals li:first-child{border-top:0;padding-top:0}
+.proposals li.waiting{opacity:.55}
 ul.open{margin:0;padding:18px 18px 18px 38px;display:flex;flex-direction:column;gap:6px}
 .background{font-size:15px}
 footer{border-top:3px solid var(--ink);padding-top:14px}
