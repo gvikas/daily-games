@@ -1,0 +1,207 @@
+{
+  "id": "007",
+  "title": "The Closed Book",
+  "victim": "Mr. Quill",
+  "level": "medium",
+  "floorplan": "chain-2x2",
+  "rooms": [
+    {
+      "id": "Sho",
+      "name": "Shop",
+      "short": "Shop",
+      "slot": "nw"
+    },
+    {
+      "id": "Rea",
+      "name": "Reading Room",
+      "short": "Reading",
+      "slot": "ne"
+    },
+    {
+      "id": "Off",
+      "name": "Office",
+      "short": "Office",
+      "slot": "se"
+    },
+    {
+      "id": "Arc",
+      "name": "Archive",
+      "short": "Archive",
+      "slot": "sw"
+    }
+  ],
+  "doors": [
+    [
+      "Sho",
+      "Rea"
+    ],
+    [
+      "Rea",
+      "Off"
+    ],
+    [
+      "Off",
+      "Arc"
+    ]
+  ],
+  "suspects": [
+    {
+      "id": "A",
+      "name": "Toby",
+      "role": "the bookbinder",
+      "label": "Binder"
+    },
+    {
+      "id": "B",
+      "name": "Vera",
+      "role": "the dealer",
+      "label": "Dealer"
+    },
+    {
+      "id": "C",
+      "name": "Felix",
+      "role": "the poet",
+      "label": "Poet"
+    },
+    {
+      "id": "D",
+      "name": "Agnes",
+      "role": "the widow",
+      "label": "Widow"
+    }
+  ],
+  "times": [
+    "20:00",
+    "21:00",
+    "22:00"
+  ],
+  "murder": {
+    "room": "Arc",
+    "time": "21:00",
+    "device": "a heavy shelf of old books fell on him"
+  },
+  "intro": [
+    {
+      "h": "Mr. Quill is dead.",
+      "t": "The old bookseller died in the Archive at 21:00. A neighbour heard the crash as the church bell rang. Whoever was in the Archive at 21:00 is the killer."
+    },
+    {
+      "h": "Four people were in the bookshop.",
+      "t": "Toby the bookbinder, Vera the dealer, Felix the poet and Agnes the widow. Four people, four rooms: at every hour every room was taken, and nobody shared a room."
+    },
+    {
+      "h": "The map shows one moment at a time.",
+      "t": "At 20:00, at 21:00 and at 22:00, everyone stood in a room. Between two of these moments a person can walk through one door, or stay in the same room. The rooms lie in a row, so the Shop and the Archive are far apart. Find out who was in the Archive at 21:00."
+    }
+  ],
+  "reasons": {
+    "occupied": "Every room was taken, and nobody shared a room.",
+    "far": "Between two hours a person can only walk through one door."
+  },
+  "clues": [
+    {
+      "id": 1,
+      "lead": "The till was opened at 21:00.",
+      "text": "At 21:00 the widow was in the Shop, paying for a book.",
+      "hint": "Tap the Widow, then tap the Shop.",
+      "marker": "Sho",
+      "constraint": {
+        "type": "at",
+        "person": "D",
+        "room": "Sho",
+        "time": "21:00"
+      }
+    },
+    {
+      "id": 2,
+      "lead": "They passed each other in a doorway.",
+      "text": "The binder and the widow swapped rooms. At 21:00 each of them stood where the other had stood at 20:00.",
+      "hint": "Where was the Widow at 21:00? The Binder stood there at 20:00.",
+      "constraint": {
+        "type": "swap",
+        "a": "A",
+        "b": "D",
+        "from": "20:00"
+      }
+    },
+    {
+      "id": 3,
+      "lead": "The cash box is on the Office desk.",
+      "text": "At 22:00 the binder was in the Office, counting the money.",
+      "hint": "Place the Binder at 22:00. Where was the Binder at 21:00? It must be one door from where he stood at 20:00 and at 22:00.",
+      "marker": "Off",
+      "constraint": {
+        "type": "at",
+        "person": "A",
+        "room": "Off",
+        "time": "22:00"
+      }
+    },
+    {
+      "id": 4,
+      "lead": "The Office lamp was cold.",
+      "text": "At 20:00 the poet was not in the Office.",
+      "hint": "Which room is left for the Poet at 20:00? And for the Dealer?",
+      "constraint": {
+        "type": "notAt",
+        "person": "C",
+        "rooms": [
+          "Off"
+        ],
+        "time": "20:00"
+      }
+    },
+    {
+      "id": 5,
+      "lead": "The poet says he met the binder in a doorway.",
+      "text": "The binder and the poet swapped rooms. At 22:00 each of them stood where the other had stood at 21:00.",
+      "hint": "Where was the Binder at 22:00? That is where the Poet was at 21:00.",
+      "constraint": {
+        "type": "swap",
+        "a": "A",
+        "b": "C",
+        "from": "21:00"
+      }
+    }
+  ],
+  "solution": {
+    "A": [
+      "Sho",
+      "Rea",
+      "Off"
+    ],
+    "B": [
+      "Off",
+      "Arc",
+      "Arc"
+    ],
+    "C": [
+      "Arc",
+      "Off",
+      "Rea"
+    ],
+    "D": [
+      "Rea",
+      "Sho",
+      "Sho"
+    ]
+  },
+  "controlQuestions": [
+    {
+      "person": "D",
+      "time": "22:00"
+    }
+  ],
+  "ending": [
+    "20:00 · The binder is in the Shop, and the widow is in the Reading Room. The dealer waits in the Office. The poet reads his new poem to Mr. Quill in the Archive.",
+    "The binder and the widow swap rooms. The poet walks into the Office, and the dealer slips past him into the Archive.",
+    "21:00 · “That book is not for sale,” says Mr. Quill. The shelf comes down, and the church bell rings. Mr. Quill is dead, and the dealer is alone with him.",
+    "The binder takes the cash box into the Office, and the poet goes out to the Reading Room. The widow stays in the Shop. The dealer stays in the Archive and hides the book in her coat.",
+    "22:00 · The widow still waits in the Shop for her change. The dealer is still in the Archive, next to the body, pretending to tidy the shelves."
+  ],
+  "closing": "The dealer was alone with Mr. Quill when the shelf fell. She wanted the one book he would not sell.",
+  "share": {
+    "title": "The Closed Book",
+    "number": "007"
+  }
+}
