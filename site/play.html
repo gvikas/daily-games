@@ -626,6 +626,27 @@ function start(c, plan){
 
   // Spillogikk (som versjon 2, 3 og 4)
   function route(a,b){ if (a === b) return [CTR[a]]; var d = doorOf(a,b); return d ? [CTR[a], d, CTR[b]] : [CTR[a], CTR[b]]; }
+  // When two people swap rooms, their routes lie on the same line. Bend each one to its own side
+  // (left of its direction of travel), so the map shows two moves passing each other, not one line.
+  var BEND = 8; // within the door opening (DOOR/2 = 20)
+  function bend(pts){
+    var a = pts[0], b = pts[pts.length-1], dx = b[0]-a[0], dy = b[1]-a[1], l = Math.hypot(dx, dy) || 1;
+    var ox = dy / l * BEND, oy = -dx / l * BEND;
+    var mid = pts.length > 2 ? pts.slice(1, -1) : [[(a[0]+b[0])/2, (a[1]+b[1])/2]];
+    return [a].concat(mid.map(function(q){ return [q[0]+ox, q[1]+oy]; }), [b]);
+  }
+  // from, to: {person: room or null}. Returns {person: points or null}.
+  function routes(from, to){
+    var out = {};
+    P.forEach(function(p){
+      var a = from[p], b = to[p];
+      if (!a || !b) { out[p] = null; return; }
+      var swapped = a !== b && P.some(function(q){ return q !== p && from[q] === b && to[q] === a; });
+      out[p] = swapped ? bend(route(a,b)) : route(a,b);
+    });
+    return out;
+  }
+  function hourOf(hh){ var m = {}; P.forEach(function(p){ m[p] = place[p][hh]; }); return m; }
   function at(pts, f){
     if (pts.length === 1) return pts[0];
     var seg = [], tot = 0, i;
@@ -656,12 +677,13 @@ function start(c, plan){
   function drawTrails(){
     while (trails.firstChild) trails.removeChild(trails.firstChild);
     if (hour === 0) return;
+    var rs = routes(hourOf(hour-1), hourOf(hour));
     P.forEach(function(p){
       var a = place[p][hour-1], b = place[p][hour];
       if (!a || !b || a === b) return;
       var pl = document.createElementNS(NS, 'polyline');
       pl.setAttribute('class', 'trail');
-      pl.setAttribute('points', route(a,b).map(function(q){ return q.join(','); }).join(' '));
+      pl.setAttribute('points', rs[p].map(function(q){ return q.join(','); }).join(' '));
       pl.setAttribute('stroke', COL[p]);
       trails.appendChild(pl);
     });
@@ -727,7 +749,8 @@ function start(c, plan){
   // Et nytt bytte avbryter det pågående (animId), så input låses aldri av animasjonen.
   function walk(to, done, dur){
     var my = ++animId, plans = {};
-    P.forEach(function(p){ var a = shown[p], b = place[p][to]; plans[p] = { a:a, b:b, pts: (a && b) ? route(a,b) : null }; });
+    var rs = routes(shown, hourOf(to));
+    P.forEach(function(p){ plans[p] = { a:shown[p], b:place[p][to], pts: rs[p] }; });
     hour = to;
     while (trails.firstChild) trails.removeChild(trails.firstChild);
     ui();
