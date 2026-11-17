@@ -488,7 +488,7 @@ a:focus-visible,summary:focus-visible{outline:3px solid var(--blood);outline-off
 .gatecard summary::-webkit-details-marker{display:none}
 .gatecard:not([open]) summary::after{content:"Vis mer ›";font-family:var(--f-display);font-size:10px;color:var(--muted)}
 .gatecard[open] .crits{margin-top:12px}
-.gatecard.cur{border-color:var(--blood);box-shadow:4px 4px 0 var(--blood)}
+.gatecard.cur{border-color:var(--ok);box-shadow:4px 4px 0 var(--ok)}
 .gatecard.passed{background:#EEF5F2}
 .gatecard .gh{display:flex;gap:12px;align-items:center}
 /* Tredelt stripe: oppfylt (fylt grønn), ikke oppfylt (rød kryssravering), ikke målt (lys skravering) */
@@ -496,7 +496,7 @@ a:focus-visible,summary:focus-visible{outline:3px solid var(--blood);outline-off
 .tribar i{display:block;height:100%}
 .tribar i + i{border-left:2px solid var(--ink)}
 .tb-met{background:var(--ok)}
-.tb-unmet{background:repeating-linear-gradient(45deg,var(--blood) 0 3px,#E8A39C 3px 6px),var(--blood)}
+.tb-unmet{background:repeating-linear-gradient(45deg,var(--ok) 0 3px,#A9D3B9 3px 6px),var(--ok)}
 .tb-unknown{background:repeating-linear-gradient(-45deg,#BFC4CC 0 2px,#ECEEF1 2px 6px)}
 .gatenow .tribar{margin:6px 0 4px}
 .crits{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
