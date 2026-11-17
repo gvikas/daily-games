@@ -217,7 +217,7 @@ export function renderRounds({ baseUrl, current: c, done }) {
   const out = [];
   if (c) {
     const cases = list(c.cases).filter(isObj).map((k) => {
-      const url = baseUrl + str(k.case);
+      const url = str(k.url).trim() || baseUrl + str(k.case); // a case may have its own address, e.g. a prototype
       const link = k.published === false
         ? '<span class="tag unpub">IKKE PUBLISERT</span>'
         : `<span class="caselink"><a class="mono" href="${esc(url)}">${esc(url)}</a><button type="button" class="copy" data-copy="${esc(url)}">Kopier</button></span>`;

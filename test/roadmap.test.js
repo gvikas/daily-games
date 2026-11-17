@@ -304,7 +304,9 @@ const ROUNDS = {
     { id: 6, title: 'Now', status: 'current', period: 'From 2026-11-17', features: ['Three attempts'],
       cases: [
         { case: '007', title: 'The Closed Book', level: 'Medium', date: '2026-11-17', published: true, new: 'First swap.' },
-        { case: '006', title: 'The Late Supper', level: 'Tricky', date: 'Saturday', published: false, new: 'Empty room.' }],
+        { case: '006', title: 'The Late Supper', level: 'Tricky', date: 'Saturday', published: false, new: 'Empty room.' },
+        { case: '008', title: 'The Cold Tea', level: 'Prototype', date: '2026-11-17', published: true, url: 'https://example.test/proto/drag-008.html' },
+        { case: '009', title: 'Empty url', published: true, url: '  ' }],
       learn: [{ text: 'Medium is solved', gate: 'A', criterion: 'At least 70 %', answer: '' }, { text: 'Bad gate', gate: 'Z', criterion: 'X' }],
       questions: [{ text: 'Send the result?' }, { case: '007', text: 'Did "swap" make sense?' }],
       observe: ['Solved or not'] },
@@ -341,6 +343,10 @@ test('the Testrunde tab: current round, links, labels, copy buttons and closed e
     assert.match(html, /href="https:\/\/example.test\/play.html\?case=007"/);
     assert.match(html, /data-copy="https:\/\/example.test\/play.html\?case=007">Kopier</);
     assert.doesNotMatch(html, /case=006/, 'an unpublished case has no link');
+    assert.match(html, /href="https:\/\/example.test\/proto\/drag-008.html"/, 'a case with its own url links there');
+    assert.match(html, /data-copy="https:\/\/example.test\/proto\/drag-008.html">Kopier</);
+    assert.doesNotMatch(html, /case=008/);
+    assert.match(html, /href="https:\/\/example.test\/play.html\?case=009"/, 'an empty url falls back to baseUrl + case');
     assert.match(html, /006<\/span><b>The Late Supper<\/b>.*IKKE PUBLISERT/s);
     assert.match(html, /Port A · At least 70 %/);
     assert.match(html, /<span class="tag">Sak 007<\/span> Did &quot;swap&quot; make sense\?/);
