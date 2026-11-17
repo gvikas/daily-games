@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, parseProposals, collect, renderPage, esc, txt, gateSummary, activeGateId, RoadmapError } from '../scripts/lib/roadmap.js';
+import { readRoadmap, readSpecs, readSpecFile, readCases, readDecisions, parseProposals, readTestRounds, collect, renderPage, esc, txt, gateSummary, activeGateId, RoadmapError } from '../scripts/lib/roadmap.js';
 
 // Every test builds its own folder. Nothing here reads docs/, which is outside git.
 function fixture(files) {
@@ -291,4 +291,69 @@ test('the sparring section shows open and waiting proposals by increment, after 
     assert.doesNotMatch(html, /Mål løst|Kryptering|Skrivefeil i status/, 'decided and unknown proposals are not listed');
   });
   withRoot(base(), (root) => assert.doesNotMatch(renderPage(collect(root)), /Til sparring/, 'no file, no section'));
+});
+
+// --- Testrunde (testrunder.json) ---
+
+const ROUNDS = {
+  baseUrl: 'https://example.test/play.html?case=',
+  rounds: [
+    { id: 5, title: 'Old', status: 'done', period: '2026-11-16', learn: [
+      { text: 'Do they come back?', gate: 'A', criterion: 'Come back', answer: 'Cannot be measured.' },
+      { text: 'Unanswered?', gate: '', criterion: '', answer: '' }] },
+    { id: 6, title: 'Now', status: 'current', period: 'From 2026-11-17', features: ['Three attempts'],
+      cases: [
+        { case: '007', title: 'The Closed Book', level: 'Medium', date: '2026-11-17', published: true, new: 'First swap.' },
+        { case: '006', title: 'The Late Supper', level: 'Tricky', date: 'Saturday', published: false, new: 'Empty room.' }],
+      learn: [{ text: 'Medium is solved', gate: 'A', criterion: 'At least 70 %', answer: '' }, { text: 'Bad gate', gate: 'Z', criterion: 'X' }],
+      questions: [{ text: 'Send the result?' }, { case: '007', text: 'Did "swap" make sense?' }],
+      observe: ['Solved or not'] },
+    { id: 4, title: 'Older', status: 'done', period: '2026-11-13', learn: [] },
+    { id: 7, title: 'Also now', status: 'current', learn: [] },
+  ],
+};
+
+test('test rounds: the first current round, done rounds newest first, warnings for two current and unknown gates', () => {
+  withRoot(fixture({ 'docs/testrunder.json': ROUNDS }), (root) => {
+    const r = readTestRounds(join(root, 'docs', 'testrunder.json'), ['A', 'B']);
+    assert.equal(r.baseUrl, 'https://example.test/play.html?case=');
+    assert.equal(r.current.id, 6);
+    assert.deepEqual(r.done.map((x) => x.id), [5, 4]);
+    assert.equal(r.warnings.length, 2);
+    assert.match(r.warnings[0], /2 runder har status "current" \(6, 7\)/);
+    assert.match(r.warnings[1], /runde 6: porten «Z» finnes ikke i roadmap.json/);
+    assert.equal(readTestRounds(join(root, 'docs', 'missing.json')), null);
+  });
+  withRoot(fixture({ 'docs/testrunder.json': '{ not json' }), (root) => {
+    const r = readTestRounds(join(root, 'docs', 'testrunder.json'));
+    assert.equal(r.current, null);
+    assert.match(r.warnings[0], /not valid JSON/);
+  });
+});
+
+test('the Testrunde tab: current round, links, labels, copy buttons and closed earlier rounds', () => {
+  withRoot(base({}, { 'docs/testrunder.json': ROUNDS }), (root) => {
+    const html = renderPage(collect(root));
+    assert.match(html, /<a href="#roadmap" data-tab="roadmap" role="tab">Roadmap<\/a><a href="#testrunde" data-tab="testrunde" role="tab">Testrunde<\/a>/);
+    assert.match(html, /<div data-panel="testrunde" hidden>/);
+    assert.match(html, /location.hash === '#testrunde'/, 'the tab is read from the address');
+    assert.match(html, /Runde 6 · Now/);
+    assert.match(html, /href="https:\/\/example.test\/play.html\?case=007"/);
+    assert.match(html, /data-copy="https:\/\/example.test\/play.html\?case=007">Kopier</);
+    assert.doesNotMatch(html, /case=006/, 'an unpublished case has no link');
+    assert.match(html, /006<\/span><b>The Late Supper<\/b>.*IKKE PUBLISERT/s);
+    assert.match(html, /Port A · At least 70 %/);
+    assert.match(html, /<span class="tag">Sak 007<\/span> Did &quot;swap&quot; make sense\?/);
+    assert.match(html, /data-copy="Send the result\?\nSak 007: Did &quot;swap&quot; make sense\?">Kopier alle spørsmålene/);
+    assert.match(html, /<ul class="observe card"><li>Solved or not<\/li><\/ul>/);
+    assert.match(html, /<details class="card round"><summary><h3>Runde 5 · Old/);
+    assert.ok(html.indexOf('Runde 5 · Old') < html.indexOf('Runde 4 · Older'), 'newest finished round first');
+    assert.match(html, /Do they come back\?.*Cannot be measured\./s);
+    assert.match(html, /Ikke besvart\./);
+    assert.doesNotMatch(html, /<details class="card round" open/, 'earlier rounds are closed');
+  });
+  withRoot(base(), (root) => {
+    const html = renderPage(collect(root));
+    assert.doesNotMatch(html, /data-tab|<script/, 'no testrunder.json: no tabs and no script');
+  });
 });

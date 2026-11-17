@@ -134,6 +134,31 @@ export function readProposals(file) {
   return parseProposals(readFileSync(file, 'utf8'));
 }
 
+/**
+ * docs/testrunder.json (Cowork). Returns { baseUrl, current, done, warnings }, or null when the file is missing.
+ * current is the round with status "current" (the first, if there are several); done is newest first.
+ * gateIds: the gates in roadmap.json, to check every learn.gate against.
+ */
+export function readTestRounds(file, gateIds = []) {
+  if (!existsSync(file)) return null;
+  const warnings = [];
+  let data;
+  try { data = JSON.parse(readFileSync(file, 'utf8')); } catch (e) {
+    return { baseUrl: '', current: null, done: [], warnings: [`docs/testrunder.json is not valid JSON: ${e.message}`] };
+  }
+  const rounds = (isObj(data) && Array.isArray(data.rounds) ? data.rounds : []).filter(isObj);
+  const current = rounds.filter((r) => r.status === 'current');
+  if (current.length > 1) warnings.push(`testrunder.json: ${current.length} runder har status "current" (${current.map((r) => r.id).join(', ')}). Bare runde ${current[0].id} vises som runden nå.`);
+  const gates = new Set(gateIds.map(String));
+  for (const r of rounds) {
+    for (const l of (Array.isArray(r.learn) ? r.learn : []).filter(isObj)) {
+      if (str(l.gate) && !gates.has(String(l.gate))) warnings.push(`testrunder.json, runde ${r.id}: porten «${l.gate}» finnes ikke i roadmap.json`);
+    }
+  }
+  const done = rounds.filter((r) => r.status === 'done').sort((a, b) => Number(b.id) - Number(a.id));
+  return { baseUrl: isObj(data) ? str(data.baseUrl) : '', current: current[0] || null, done, warnings };
+}
+
 /** Everything the page shows. root holds docs/, cases/ and site/. */
 export function collect(root, { git = null, now = new Date() } = {}) {
   const roadmap = readRoadmap(join(root, 'docs', 'roadmap.json'));
@@ -147,10 +172,82 @@ export function collect(root, { git = null, now = new Date() } = {}) {
       if (SHOWN.includes(p.status) && p.session !== null && !ids.has(p.session)) sparring.warnings.push(`forslag «${p.title}»: Økt ${p.session} finnes ikke i roadmap.json`);
     }
   }
-  return { roadmap, specs, cases, warnings, decisions, sparring, git, now };
+  const gateIds = (Array.isArray(roadmap.gates) ? roadmap.gates : []).filter(isObj).map((g) => g.id);
+  const rounds = readTestRounds(join(root, 'docs', 'testrunder.json'), gateIds);
+  return { roadmap, specs, cases, warnings, decisions, sparring, rounds, git, now };
 }
 
 // --- Page ------------------------------------------------------------------------------------
+
+// Tabs and copy buttons. Works from file://: the tab lives in the address (#testrunde), nothing is stored.
+const TAB_SCRIPT = `(function(){
+  var tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
+  function show(t){
+    t = t || (location.hash === '#testrunde' ? 'testrunde' : 'roadmap');
+    panels.forEach(function(p){ p.hidden = p.getAttribute('data-panel') !== t; });
+    tabs.forEach(function(a){ a.setAttribute('aria-selected', a.getAttribute('data-tab') === t ? 'true' : 'false'); });
+  }
+  window.addEventListener('hashchange', function(){ show(); }); show();
+  document.addEventListener('click', function(e){
+    var tab = e.target.closest('[data-tab]');
+    if (tab) {
+      e.preventDefault();
+      var t = tab.getAttribute('data-tab');
+      try { history.replaceState(null, '', t === 'testrunde' ? '#testrunde' : location.pathname + location.search); } catch (_) {}
+      show(t); return;
+    }
+    var b = e.target.closest('[data-copy]'); if (!b) return;
+    var text = b.getAttribute('data-copy'), label = b.textContent;
+    function done(){ b.textContent = 'Kopiert'; setTimeout(function(){ b.textContent = label; }, 1500); }
+    function fallback(){
+      var a = document.createElement('textarea'); a.value = text; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.opacity = '0';
+      document.body.appendChild(a); a.select();
+      try { if (document.execCommand('copy')) done(); } catch (_) {}
+      a.remove();
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  });
+})();`;
+
+const gateTag = (l) => (str(l.gate) ? `<span class="tag gatetag">Port ${esc(l.gate)}${str(l.criterion) ? ` · ${esc(l.criterion)}` : ''}</span>` : '');
+const list = (v) => (Array.isArray(v) ? v : []);
+
+/** The «Testrunde» tab: the current round in four parts, then finished rounds, closed. */
+export function renderRounds({ baseUrl, current: c, done }) {
+  const out = [];
+  if (c) {
+    const cases = list(c.cases).filter(isObj).map((k) => {
+      const url = baseUrl + str(k.case);
+      const link = k.published === false
+        ? '<span class="tag unpub">IKKE PUBLISERT</span>'
+        : `<span class="caselink"><a class="mono" href="${esc(url)}">${esc(url)}</a><button type="button" class="copy" data-copy="${esc(url)}">Kopier</button></span>`;
+      return `<li class="card rcase"><div class="rch"><span class="sid">${esc(k.case)}</span><b>${esc(k.title)}</b>${k.level ? `<span class="tag">${esc(k.level)}</span>` : ''}<span class="mono small muted">${esc(k.date)}</span></div>${k.new ? `<p>${txt(k.new)}</p>` : ''}${link}</li>`;
+    }).join('');
+    const feats = list(c.features).map((f) => `<li>${txt(f)}</li>`).join('');
+    out.push(section('01 · Runden nå', `Runde ${esc(c.id)} · ${esc(c.title)}`,
+      `${feats ? `<div class="card"><h3>Nytt i denne runden</h3><ul class="feats">${feats}</ul></div>` : ''}<ul class="rcases">${cases}</ul>`,
+      `${esc(c.period)}${c.playtest ? ` · ${esc(c.playtest)}` : ''}`));
+
+    const learn = list(c.learn).filter(isObj).map((l) => `<li><span>${txt(l.text)}</span>${gateTag(l)}</li>`).join('');
+    out.push(section('02 · Lære', 'Hva vi vil finne ut', `<ul class="learn card">${learn || '<li class="muted">Ingenting ennå.</li>'}</ul>`));
+
+    const qs = list(c.questions).filter(isObj);
+    const plain = qs.map((q) => (str(q.case) ? `Sak ${q.case}: ` : '') + str(q.text)).join('\n');
+    out.push(section('03 · Spørsmål', 'Spørsmål til testerne',
+      `<ol class="questions card">${qs.map((q) => `<li>${str(q.case) ? `<span class="tag">Sak ${esc(q.case)}</span> ` : ''}${txt(q.text)}</li>`).join('')}</ol>${qs.length ? `<p><button type="button" class="copy" data-copy="${esc(plain)}">Kopier alle spørsmålene</button></p>` : ''}`));
+
+    out.push(section('04 · Observere', 'Hva du noterer selv', `<ul class="observe card">${list(c.observe).map((o) => `<li>${txt(o)}</li>`).join('')}</ul>`));
+  } else {
+    out.push(section('Testrunde', 'Ingen runde pågår', '<p class="muted">Ingen runde i <code>docs/testrunder.json</code> har status «current».</p>'));
+  }
+  if (done.length) {
+    const cards = done.map((r) => `<details class="card round"><summary><h3>Runde ${esc(r.id)} · ${esc(r.title)}</h3><span class="mono small muted">${esc(r.period)}</span></summary>
+  <ul class="answers">${list(r.learn).filter(isObj).map((l) => `<li><span class="lq">${txt(l.text)}</span>${gateTag(l)}<span class="la">${str(l.answer).trim() ? txt(l.answer) : '<span class="muted">Ikke besvart.</span>'}</span></li>`).join('')}</ul>
+</details>`).join('');
+    out.push(section(c ? '05 · Tidligere' : 'Tidligere', 'Tidligere runder', `<div class="rounds">${cards}</div>`));
+  }
+  return out.join('\n');
+}
 
 const STATE = {
   done: { label: 'FERDIG', cls: 'done' },
@@ -214,7 +311,7 @@ function section(eyebrow, title, body, intro = '') {
 }
 
 export function renderPage(model) {
-  const { roadmap: r, specs, cases, warnings, decisions, sparring, git, now } = model;
+  const { roadmap: r, specs, cases, warnings, decisions, sparring, rounds, git, now } = model;
   const incs = Array.isArray(r.increments) ? r.increments.filter(isObj) : [];
   const gates = Array.isArray(r.gates) ? r.gates.filter(isObj) : [];
   const gateById = Object.fromEntries(gates.map((g) => [g.id, g]));
@@ -352,6 +449,7 @@ export function renderPage(model) {
     out.push(`<p class="background"><a href="${esc(r.background.file)}">${esc(r.background.label || r.background.file)} →</a></p>`);
   }
 
+  const test = rounds ? renderRounds(rounds) : null;
   const gitText = git ? ` · siste commit <span class="mono">${esc(git.hash)}</span> (${esc(git.date)})` : '';
   const footer = `<footer class="small muted">Laget ${esc(stamp(now))}${gitText} av <code>npm run roadmap</code>. Siden har ingen avkrysninger: endre kildene og lag den på nytt.</footer>`;
 
@@ -369,9 +467,16 @@ export function renderPage(model) {
 <body>
 <!-- Laget av npm run roadmap (scripts/roadmap.js). Ikke rediger denne filen: endringer forsvinner neste gang den lages. -->
 <div class="wrap">
+${test ? `<nav class="tabs" role="tablist"><a href="#roadmap" data-tab="roadmap" role="tab">Roadmap</a><a href="#testrunde" data-tab="testrunde" role="tab">Testrunde</a></nav>
+<div data-panel="roadmap">
 ${out.join('\n')}
+</div>
+<div data-panel="testrunde" hidden>
+${test}
+</div>` : out.join('\n')}
 ${footer}
 </div>
+${test ? `<script>${TAB_SCRIPT}</script>` : ''}
 </body>
 </html>
 `;
@@ -535,6 +640,30 @@ tbody th{font-family:var(--f-mono);font-weight:600;font-size:13px;white-space:no
 .proposals li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--line)}
 .proposals li:first-child{border-top:0;padding-top:0}
 .proposals li.waiting{opacity:.55}
+.tabs{display:flex;gap:0;margin:0 0 24px;border-bottom:2px solid var(--ink)}
+.tabs a{padding:10px 18px;font-family:'Silkscreen',monospace;font-size:13px;text-decoration:none;color:var(--muted);border:2px solid transparent;border-bottom:0;margin-bottom:-2px}
+.tabs a[aria-selected="true"]{color:var(--ink);background:var(--paper);border-color:var(--ink)}
+.feats,.observe,.learn,.answers{margin:0;padding:0;list-style:none}
+.feats li{padding:4px 0 4px 18px;position:relative}.feats li::before{content:'›';position:absolute;left:4px}
+.rcases{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.rcase p{margin:8px 0}
+.rch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.caselink{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.caselink a{overflow-wrap:anywhere;font-size:13px}
+button.copy{font:inherit;font-size:13px;padding:4px 10px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+button.copy:active{transform:translate(2px,2px);box-shadow:none}
+.learn li,.answers li{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.learn li:first-child,.answers li:first-child{border-top:0}
+.gatetag{white-space:normal}
+.questions{margin:0;padding:18px 18px 18px 38px;display:flex;flex-direction:column;gap:8px}
+.observe li{padding:6px 0 6px 28px;position:relative}
+.observe li::before{content:'';position:absolute;left:0;top:9px;width:14px;height:14px;border:2px solid var(--ink);background:var(--paper)}
+.learn.card,.observe.card{padding:8px 18px}
+.rounds{display:flex;flex-direction:column;gap:12px}
+.round summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;cursor:pointer}
+.round summary h3{margin:0}
+.answers{margin-top:12px}
+.lq{font-weight:700}
 ul.open{margin:0;padding:18px 18px 18px 38px;display:flex;flex-direction:column;gap:6px}
 .background{font-size:15px}
 footer{border-top:3px solid var(--ink);padding-top:14px}
