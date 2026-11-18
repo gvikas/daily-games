@@ -4,7 +4,7 @@ description: Reads the clues of a case back into logic from the blind file only 
 tools: Read
 hooks:
   PreToolUse:
-    - matcher: "*"
+    - matcher: "Read"
       hooks:
         - type: command
           command: node "$CLAUDE_PROJECT_DIR/scripts/reader-access.js" hook

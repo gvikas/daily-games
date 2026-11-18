@@ -147,3 +147,12 @@ test('the reader log fails on anything but its own blind file, and on an empty l
   assert.match(checkLog([], '007').errors[0], /empty: the guard did not run/);
   assert.match(checkLog([line('cases/drafts/006.blind.json')], '007').errors.pop(), /never opened cases\/drafts\/007.blind.json/);
 });
+
+test('the case reader has no tool but Read, so the guard (which checks Read) covers everything it can do', () => {
+  const md = readFileSync(join(ROOT, '.claude', 'agents', 'case-reader.md'), 'utf8');
+  const front = (md.match(/^---\n([\s\S]*?)\n---/) || [])[1] || '';
+  const tools = (front.match(/^tools:\s*(.*)$/m) || [])[1];
+  assert.ok(tools !== undefined, 'case-reader.md must list its tools; without "tools:" it would get every tool');
+  assert.deepEqual(tools.split(',').map((t) => t.trim()).filter(Boolean), ['Read'], 'give the reader more tools only together with the guard in scripts/lib/reader-access.js');
+  assert.match(front, /matcher:\s*"Read"/, 'the guard hook must check Read');
+});
