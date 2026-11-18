@@ -5,7 +5,8 @@ Et daglig deduksjonsspill med mordgåte-tema (arbeidstittel). Spilleren rekonstr
 Bygges av én person med AI-assistert koding. Innholdet (sakene) må kunne genereres.
 
 ## Språk
-- Spillet, UI-tekst og kode: engelsk (internasjonalt marked).
+- Spillet og UI-tekst: engelsk (internasjonalt marked).
+- Kode, inkludert kommentarer, commit-meldinger og navn: engelsk. Eksisterende norske kommentarer oversettes når filen likevel endres.
 - Dokumentasjon i `docs/`: norsk.
 
 ## Les dette før du begynner
