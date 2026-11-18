@@ -4,3 +4,5 @@ dist/
 .env*
 docs/
 .claude/launch.json
+Claude outputs/
+archive/

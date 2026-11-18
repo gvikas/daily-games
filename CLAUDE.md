@@ -20,7 +20,7 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - Motor (regler, validering og solver): Node ≥ 20, ren ESM-JavaScript uten eksterne avhengigheter. Tester med `node:test`.
 - `engine/` bruker ingen Node-API-er, slik at den kan importeres i nettleseren senere. Fil-I/O og CLI ligger i `scripts/`.
 - Spillsiden er `site/play.html?case=<id>`: statisk HTML og JavaScript uten byggesteg. Den leser saken og plantegningen fra JSON og tegner kartet selv. Rammeverk for frontend er ikke valgt.
-- `site/002.html` og `site/v3.html` er eldre prototyper med hardkodede data. De skal stå urørt.
+- `archive/` inneholder eldre versjoner av spillsiden. Den ligger bare lokalt (står i `.gitignore`), publiseres ikke og skal ikke endres.
 
 ## Saker og solver
 - Saker ligger som JSON i `cases/<id>-<slug>.json`. Formatet er beskrevet i `docs/specs/done/001-case-format-and-solver.md`.
@@ -42,7 +42,7 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 3. Code kjører `npm run publish-case <id> <ÅÅÅÅ-MM-DD>` og spiller saken gjennom i `play.html?case=<id>` på mobilbredde. Code sier fra hvis noe ikke lar seg vise, og committer og pusher.
 
 `publish-case` validerer saken, kopierer den, plantegningen og modulene i `site/lib/` til `site/`, og fører saken inn i `site/cases/index.json` på datoen. `site/index.html` åpner da saken den dagen, uten at noen URL endres for hånd.
-- Uten dato kopieres saken uten å bli ført opp. Den kan åpnes med `play.html?case=<id>`.
+- Uten dato kopieres saken uten å bli ført opp. Det er bare lov for testsaker (id som starter på `test-`). En ekte sak publiseres alltid med datoen den gjelder, og først den dagen.
 - GitHub Pages publiserer bare `site/`. Kopiene i `site/cases/`, `site/floorplans/` og `site/lib/` redigeres aldri for hånd.
 - Kjør `npm run publish-case <id>` på nytt etter endringer i en sak, en plantegning eller en av modulene i `site/lib/`. `npm test` sier fra hvis kopiene er utdaterte.
 - Ikke publiser en sak før dagen den gjelder. Fasiten ligger i JSON-filen og er offentlig så snart den er pushet.
@@ -61,7 +61,9 @@ Regler:
 - Cowork endrer ikke kode. Trenger en sak noe formatet eller siden ikke støtter, skrives behovet opp, og Code bygger det.
 - `docs/playtest.md` og `docs/design/decisions.md` skrives av begge. Legg bare til nederst, og skriv aldri om det den andre har skrevet.
 - Når en implementering avviker fra specen, oppdater specen eller noter det i `decisions.md`.
+- Prototyper: Cowork lager klikkbare prototyper i `docs/prototypes/`. Code kopierer dem uendret til `site/proto/` når Vikas ber om det. De kommer aldri inn i `site/cases/index.json`.
+- Plantegninger: Cowork legger forslag til nye hus i `docs/prototypes/floorplans/`. Code validerer dem og flytter dem til `floorplans/`.
 
 ### Roadmap-siden
-- `npm run roadmap` lager `docs/roadmap.html` fra `docs/roadmap.json` (Cowork), specs, saker og `decisions.md` (spec 009). Siden redigeres aldri for hånd.
+- `npm run roadmap` lager `docs/roadmap.html` fra `docs/roadmap.json` (Cowork), specs, saker og `decisions.md` (spec 009). Den leser også `docs/testrunder.json` (testrundene) og statuslinjene i `docs/design/forslag-til-sparring.md`. Begge eies av Cowork. Siden redigeres aldri for hånd.
 - Code kjører den når en spec flyttes til `docs/specs/done/`, og når en sak publiseres. Cowork kjører den, eller ber om en ny kjøring, når `roadmap.json`, `decisions.md` eller en spec er endret.
