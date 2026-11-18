@@ -697,6 +697,7 @@ function start(c, plan){
   }
   function ui(){
     var inv = mode === 'investigate';
+    syncClock();
     hourBtns.forEach(function(b){
       var hh = +b.dataset.h;
       b.setAttribute('aria-pressed', hh === hour ? 'true' : 'false'); b.disabled = busy;
@@ -913,15 +914,20 @@ function start(c, plan){
     $('storyT').textContent = STORY[eStep];
     storyNext.textContent = eStep < STORY.length - 1 ? 'Next' : 'See your result';
   }
-  function clockAt(ti){
-    if (ti < MI){ clock.classList.remove('stopped'); clockT.textContent = HRS[ti]; body.style.opacity = 0; }
-    else if (ti === MI){ clock.classList.add('stopped'); clockT.textContent = HRS[MI]; body.style.opacity = 1; }
+  // The clock in the murder room, in the ending. Until the story reaches the murder it shows the hour
+  // of the selected tab, also during the moves. From the step that shows the murder hour on, it stands
+  // at the murder hour in red, whatever tab is selected: it stopped when the victim fell.
+  var stopped = false;
+  function syncClock(){
+    if (mode !== 'ending') return;
+    clock.classList.toggle('stopped', stopped);
+    clockT.textContent = HRS[stopped ? MI : hour];
+    body.style.opacity = stopped ? 1 : 0;
   }
   function startEnding(verdict){
     animId++; busy = false; sel = null; guide = null;
     P.forEach(function(p){ place[p] = SOLV[p].slice(); });
-    hour = 0; eStep = 0;
-    clockAt(0);
+    hour = 0; eStep = 0; stopped = MI === 0;
     $('endVerdict').hidden = !verdict; $('seeStory').hidden = !verdict;
     $('endStory').hidden = !!verdict; storyNext.hidden = !!verdict; $('endResult').hidden = true;
     showStep(); setMode('ending'); still();
@@ -934,7 +940,7 @@ function start(c, plan){
   function showResult(){
     animId++; busy = false; sel = null; guide = null; solved = true;
     P.forEach(function(p){ place[p] = SOLV[p].slice(); });
-    hour = T - 1; clockAt(MI);
+    hour = T - 1; stopped = true;
     $('endVerdict').hidden = true; $('seeStory').hidden = true;
     $('endStory').hidden = true; storyNext.hidden = true; $('endResult').hidden = false;
     setMode('ending'); still();
@@ -944,7 +950,8 @@ function start(c, plan){
     if (busy) return;
     if (eStep === STORY.length - 1){ $('endStory').hidden = true; storyNext.hidden = true; $('endResult').hidden = false; return; }
     eStep++; showStep();
-    if (eStep % 2 === 1) stroll((eStep + 1) / 2); else clockAt(eStep / 2);
+    if (eStep % 2 === 0 && eStep / 2 >= MI) stopped = true;
+    if (eStep % 2 === 1) stroll((eStep + 1) / 2); else syncClock();
   });
   $('replayBtn').addEventListener('click', function(){ startEnding(false); });
   $('copy').addEventListener('click', function(){
