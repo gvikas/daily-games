@@ -161,7 +161,15 @@ const ADJ = {}; CASE.rooms.forEach(r=>ADJ[r.id]=new Set([r.id])); CASE.doors.for
 const doorOf = (a,b) => CASE.doors.find(d=>(d.a===a&&d.b===b)||(d.a===b&&d.b===a));
 let place = Array.from({length:T},()=>({}));   // place[t][p] = rom
 let hour = 0, shown = 0, introStep = 0, sel = null, attempts = 0, done = false, endStep = -1;
-const stats = {drag:0, tap:0, stay:0, rejected:0, undoToWaiting:0, hints:0, start:null, end:null};
+const stats = {drag:0, tap:0, stay:0, rejected:0, undoToWaiting:0, hints:0, start:null, end:null, ms:0};
+// The time counts only while the page is visible (stats.ms). It is saved with the rest, so a case
+// opened again later continues from there.
+let since = null;
+function run(){ if (stats.start && !done && since===null && !document.hidden) since=Date.now(); }
+function bank(){ if (since!==null){ const n=Date.now(); stats.ms=(stats.ms||0)+(n-since); since=n; } }
+function begin(){ if (!stats.start) stats.start=Date.now(); run(); }
+document.addEventListener("visibilitychange",()=>{ if (document.hidden){ bank(); since=null; save(); } else run(); });
+window.addEventListener("pagehide",()=>{ bank(); since=null; save(); });
 const WAIT = {x:0,y:205,w:300,h:45};
 
 // ---------- tegning ----------
@@ -254,7 +262,7 @@ function say(text,bad){ const m=$("msg"); m.textContent=text||""; m.className="m
 
 function setRoom(p,room,how){
   if (done) return;
-  if (!stats.start) stats.start=Date.now();
+  begin();
   const t=hour, prev=place[t][p] || null;
   if (room===null){ delete place[t][p]; stats.undoToWaiting++; after(); return; }
   if (!allowed(p,t).has(room)){ stats.rejected++; say(SUS[p].label+": "+"between two hours a person can only walk through one door.",true); draw(); return; }
@@ -337,12 +345,12 @@ function renderClues(){
   $("hint").hidden=true;
   $("status").textContent = `Clue ${shown}/${CASE.clues.length} · ${3-attempts} tries left`;
 }
-$("nextClue").onclick=()=>{ if (!stats.start) stats.start=Date.now(); shown++; renderClues(); draw(); };
+$("nextClue").onclick=()=>{ begin(); shown++; renderClues(); draw(); };
 $("hintBtn").onclick=()=>{ const c=CASE.clues[shown-1]; if(!c) return; stats.hints++; $("hint").textContent=c.hint; $("hint").hidden=false; };
 
 // ---------- intro ----------
 function showIntro(){ const s=CASE.intro[introStep]; $("introH").textContent=s.h; $("introT").textContent=s.t; $("introNext").textContent = introStep===CASE.intro.length-1?"Start":"Next"; }
-$("introNext").onclick=()=>{ introStep++; if (introStep<CASE.intro.length) return showIntro(); $("introPanel").hidden=true; $("playPanel").hidden=false; shown=1; stats.start=Date.now(); renderClues(); draw(); };
+$("introNext").onclick=()=>{ introStep++; if (introStep<CASE.intro.length) return showIntro(); $("introPanel").hidden=true; $("playPanel").hidden=false; shown=1; begin(); renderClues(); draw(); };
 
 // ---------- anklage ----------
 let accWho=null, accWhere=null;
@@ -367,7 +375,7 @@ $("accGo").onclick=()=>{
 
 // ---------- slutt ----------
 function finish(ok){
-  done=true; if(!stats.end) stats.end=Date.now(); stats.solved=ok;
+  bank(); since=null; done=true; if(!stats.end) stats.end=Date.now(); stats.solved=ok;
   place = CASE.times.map((_,t)=>Object.fromEntries(P.map(p=>[p,CASE.solution[p][t]])));
   $("accusePanel").hidden=true; $("endPanel").hidden=false;
   $("verdict").textContent = ok ? "Case closed." : "Case unsolved.";
@@ -382,14 +390,14 @@ $("endNext").onclick=()=>{
 };
 function fmt(ms){ const s=Math.round(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 function resultText(){
-  return `Daily case ${CASE.id} · prototype\n${stats.solved?"Solved":"Not solved"} · try ${attempts} of 3 · ${fmt(stats.end-stats.start)}\nMoves: ${stats.drag} drag · ${stats.tap} tap · ${stats.stay} stayed\nBlocked: ${stats.rejected} · hints: ${stats.hints}`;
+  return `Daily case ${CASE.id} · prototype\n${stats.solved?"Solved":"Not solved"} · try ${attempts} of 3 · ${fmt(stats.ms||0)}\nMoves: ${stats.drag} drag · ${stats.tap} tap · ${stats.stay} stayed\nBlocked: ${stats.rejected} · hints: ${stats.hints}`;
 }
 function showStats(){ $("stats").textContent=resultText(); }
 $("copyBtn").onclick=()=>{ const t=resultText(); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$("copyBtn").textContent="Copied").catch(()=>{ $("stats").textContent=t; }); };
 
 // ---------- lagring per nettleser (bekvemmelighet) ----------
 const KEY="proto-drag-"+CASE.id;
-function save(){ try{ localStorage.setItem(KEY,JSON.stringify({place,shown,attempts,stats,done})); }catch(e){} }
+function save(){ bank(); try{ localStorage.setItem(KEY,JSON.stringify({place,shown,attempts,stats,done})); }catch(e){} }
 function load(){
   if (location.search.includes("reset")) { try{localStorage.removeItem(KEY)}catch(e){} return; }
   try{ const s=JSON.parse(localStorage.getItem(KEY)); if(!s) return; if (s.done){ Object.assign(stats,s.stats); attempts=s.attempts; finish(s.stats.solved); return true; }
@@ -399,6 +407,7 @@ function load(){
 $("title").textContent=CASE.title;
 if (!load()){ renderHours(); showIntro(); renderClues(); draw(); }
 else { renderHours(); if (!done) renderClues(); draw(); }
+run();
 </script>
 </body>
 </html>

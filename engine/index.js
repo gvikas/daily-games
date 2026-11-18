@@ -5,4 +5,4 @@ export { analyze, EXHAUSTIVE_CLUE_LIMIT } from './report.js';
 export { validateFloorplan, layout, decorate, doorPoint, sharedWall } from './floorplan.js';
 export { validatePresentation, LIMITS } from './presentation.js';
 export { conflicts } from './conflicts.js';
-export { createProgress, attemptsLeft, squares, MAX_ATTEMPTS } from './progress.js';
+export { createProgress, createStopwatch, attemptsLeft, squares, MAX_ATTEMPTS } from './progress.js';

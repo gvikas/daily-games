@@ -330,7 +330,7 @@ a{color:inherit}
 <script type="module">
 import { validateFloorplan, layout, decorate, doorPoint, nameFontSize } from './lib/floorplan.js';
 import { conflicts } from './lib/conflicts.js';
-import { createProgress, attemptsLeft, squares, MAX_ATTEMPTS } from './lib/progress.js';
+import { createProgress, createStopwatch, attemptsLeft, squares, MAX_ATTEMPTS } from './lib/progress.js';
 
 var $ = function(id){ return document.getElementById(id); };
 var app = $('app');
@@ -538,7 +538,7 @@ function start(c, plan){
   // --- From here on everything is as in version 4 (the old site/003.html), with the case as data ---
   var place = {}, shown = {};
   P.forEach(function(p){ place[p] = HRS.map(function(){ return null; }); shown[p] = null; });
-  var mode = 'intro', hour = 0, sel = null, busy = false, solved = false, strikes = 0, t0 = null, tmr = null, pickS = null, pickR = null;
+  var mode = 'intro', hour = 0, sel = null, busy = false, solved = false, strikes = 0, watch = null, tmr = null, pickS = null, pickR = null;
   var revealed = 0, guide = null, introStep = 0, eStep = 0, animId = 0, swiped = false;
   var shownIds = [], conflictList = [], tipNow = false;
   var TIP = 'Anyone may have stayed where they were, or walked through one door.';
@@ -676,10 +676,19 @@ function start(c, plan){
     return 'ok';
   }
   function fmt(s){ var m = Math.floor(s/60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
-  function secs(){ return t0 ? Math.max(0, Math.floor((Date.now()-t0)/1000)) : 0; }
-  function tick(){ stat.textContent = fmt(secs()) + (strikes ? ' · ' + '🟥'.repeat(strikes) : ''); }
-  // The start time is stored per case, so the clock keeps going after a reload.
-  function startT(){ if (!t0 && !solved){ state = progress.start(Date.now()); t0 = state.startedAt; tmr = setInterval(tick, 1000); tick(); } }
+  // The clock counts only while the page is visible. The visible time is saved every second,
+  // so it continues from there after a reload or when the case is opened again later.
+  function secs(){ return watch ? Math.floor(watch.elapsed(Date.now()) / 1000) : 0; }
+  function save(){ if (watch && !solved) state = progress.saveElapsed(watch.elapsed(Date.now())); }
+  function tick(){ save(); stat.textContent = fmt(secs()) + (strikes ? ' · ' + '🟥'.repeat(strikes) : ''); }
+  document.addEventListener('visibilitychange', function(){
+    if (!watch || solved) return;
+    if (document.hidden){ watch.pause(Date.now()); save(); } else { watch.start(Date.now()); tick(); }
+  });
+  window.addEventListener('pagehide', function(){ if (watch && !solved){ watch.pause(Date.now()); save(); } });
+  window.addEventListener('pageshow', function(){ if (watch && !solved && !document.hidden) watch.start(Date.now()); });
+  // The clock starts with the first move (or the accusation), and continues from the saved visible time.
+  function startT(){ if (!watch && !solved){ state = progress.start(Date.now()); watch = createStopwatch(state.elapsed); if (!document.hidden) watch.start(Date.now()); tmr = setInterval(tick, 1000); tick(); } }
 
   function drawTrails(){
     while (trails.firstChild) trails.removeChild(trails.firstChild);

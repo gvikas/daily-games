@@ -4,7 +4,7 @@
 
 export const MAX_ATTEMPTS = 3;
 
-const blank = () => ({ strikes: 0, outcome: null, seconds: null, stayTip: false, startedAt: null });
+const blank = () => ({ strikes: 0, outcome: null, seconds: null, stayTip: false, startedAt: null, elapsed: 0 });
 
 /**
  * storage:   an object with getItem/setItem/removeItem (localStorage), or null.
@@ -29,6 +29,7 @@ export function createProgress(storage, caseId, extraKeys = []) {
             seconds: Number.isFinite(v.seconds) ? v.seconds : null,
             stayTip: v.stayTip === true,
             startedAt: Number.isFinite(v.startedAt) ? v.startedAt : null,
+            elapsed: Number.isFinite(v.elapsed) && v.elapsed > 0 ? v.elapsed : 0,
           };
         }
       } catch { /* a broken record counts as nothing saved */ }
@@ -57,16 +58,36 @@ export function createProgress(storage, caseId, extraKeys = []) {
       return write({ ...s, outcome: 'solved', seconds });
     },
     markStayTip() { return write({ ...read(), stayTip: true }); },
-    /** The time the player started the case (ms). Set once, so the clock survives a reload. */
+    /** The time the player started the case (ms). Set once: it marks that the clock is running. */
     start(now) {
       const s = read();
       return s.startedAt !== null ? s : write({ ...s, startedAt: now });
+    },
+    /** The time the page has been visible while the case was played (ms), so the clock survives a reload. */
+    saveElapsed(ms) {
+      const s = read();
+      if (s.outcome || !Number.isFinite(ms)) return s;
+      return write({ ...s, elapsed: Math.max(s.elapsed, Math.round(ms)) });
     },
     reset() {
       memory = blank();
       for (const k of [key, ...extraKeys]) safe(() => storage.removeItem(k), null);
       return { ...memory };
     },
+  };
+}
+
+/**
+ * A stopwatch that counts only while it runs. The page starts it when it is visible and pauses it
+ * when it is hidden, so time spent in another tab or app does not count. `elapsed` is where it starts.
+ */
+export function createStopwatch(elapsed = 0) {
+  let banked = Number.isFinite(elapsed) && elapsed > 0 ? elapsed : 0, since = null;
+  return {
+    start(now) { if (since === null) since = now; },
+    pause(now) { if (since !== null) { banked += Math.max(0, now - since); since = null; } },
+    elapsed(now) { return banked + (since === null ? 0 : Math.max(0, now - since)); },
+    get running() { return since !== null; },
   };
 }
 
