@@ -1,0 +1,4 @@
+{
+  "forbiddenWords": ["around", "about", "maybe", "perhaps", "probably", "might", "roughly", "sometime"],
+  "maxClueLength": 120
+}

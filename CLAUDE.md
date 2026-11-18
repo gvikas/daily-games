@@ -31,6 +31,8 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 - Spilleren har tre forsøk per sak. Forsøk og resultat lagres per sak i `localStorage` (`case-<id>-progress`). `play.html?case=<id>&reset` nullstiller saken, til testing. Den skal ikke lenkes til.
 - `level` (`easy`, `medium`, `hard`, `tricky`) og `twist` (`empty-room`) er valgfrie og valideres av solveren. En `tricky`-sak har nøyaktig én `twist`. Nye vrier krever kode og en egen spec.
 - Saker med id som starter på `test-`, er testsaker for hus og størrelser. De skal ikke inn i `site/cases/index.json`.
+- `npm run check-text <id>` sjekker teksten i en sak: forbudte ord (listen står i `scripts/check-text.json`), navn i funn når saken har `label`, lange funn, og at hvert funn leses tilbake til sin `constraint` (spec 010). Både Cowork og Code kan kjøre den.
+- `npm run blind-case <id>` og tilbakelesingen skriver til `cases/drafts/`, og `npm run playthrough <id>` lagrer skjermbilder i `.playthrough/<id>/`. Begge mappene står i `.gitignore`. Gjennomspillingen trenger Playwright (`npm install`, så `npx playwright install chromium`). `npm test` hopper over testene som trenger den, hvis den mangler.
 
 ## Plantegninger
 - Hus ligger i `floorplans/<id>.json` som rektangler på et rutenett med dører. Ingen koordinater skrives for hånd: vegger, dører, romsentre og markører regnes ut i `engine/floorplan.js`.
@@ -39,7 +41,8 @@ Ikke les `docs/research/` med mindre oppgaven krever det. Der ligger bakgrunnsma
 ## Publisere en sak
 1. Cowork lager saken i `cases/`, kjører `npm run solve` (exit-kode 0) og `npm test`, og sier fra til Vikas at saken er klar. Tilsiktede advarsler fra solveren nevnes i den meldingen.
 2. Vikas ber Code publisere.
-3. Code kjører `npm run publish-case <id> <ÅÅÅÅ-MM-DD>` og spiller saken gjennom i `play.html?case=<id>` på mobilbredde. Code sier fra hvis noe ikke lar seg vise, og committer og pusher.
+3. Code kjører `/check-case <id>`: solveren, tilbakelesing av funnene med subagenten `case-reader`, `npm run check-text`, og gjennomspilling på mobilbredde med subagenten `case-playthrough`. Code rapporterer funnene og endrer ikke teksten. Feil i teksten går tilbake til Cowork.
+4. Code kjører `npm run publish-case <id> <ÅÅÅÅ-MM-DD>`, sier fra hvis noe ikke lar seg vise, og committer og pusher.
 
 `publish-case` validerer saken, kopierer den, plantegningen og modulene i `site/lib/` til `site/`, og fører saken inn i `site/cases/index.json` på datoen. `site/index.html` åpner da saken den dagen, uten at noen URL endres for hånd.
 - Uten dato kopieres saken uten å bli ført opp. Det er bare lov for testsaker (id som starter på `test-`). En ekte sak publiseres alltid med datoen den gjelder, og først den dagen.

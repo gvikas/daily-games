@@ -10,6 +10,13 @@
     "solve": "node scripts/solve.js",
     "publish-case": "node scripts/publish-case.js",
     "roadmap": "node scripts/roadmap.js",
+    "blind-case": "node scripts/blind-case.js",
+    "check-text": "node scripts/check-text.js",
+    "playthrough": "node scripts/playthrough.js",
+    "reader-access": "node scripts/reader-access.js",
     "test": "node --test \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
   }
 }

@@ -6,3 +6,5 @@ docs/
 .claude/launch.json
 Claude outputs/
 archive/
+cases/drafts/
+.playthrough/
