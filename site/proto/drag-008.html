@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Daily case 008 · prototype</title>
 <style>
-/* Prototype (Cowork, 2026-11-17): brikker på kartet, dra med spor, trykk som reserve, telling av metode.
+/* Prototype v2 (Cowork, 2026-11-19, etter bruker 8): knapper fast nederst, mindre rammer og luft, «?» viser historien,
+   dempede brikker bare fra timen rett før og bare når de passer med timen etter, og ingen automatisk bytting.
+   Prototype v1 (2026-11-17): brikker på kartet, dra med spor, trykk som reserve, telling av metode.
    Selvstendig fil. Saken ligger i CASE nederst. Ikke en del av spillet. */
 :root{
   --bg:#EDF0F1; --surface:#FFFFFF; --ink:#15202A; --muted:#56636E; --line:#D2D9DE;
@@ -18,7 +20,7 @@ html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit}
 [hidden]{display:none!important}
-.app{max-width:520px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 16px 24px;display:flex;flex-direction:column;gap:10px;min-height:100dvh}
+.app{max-width:520px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 16px 96px;display:flex;flex-direction:column;gap:8px;min-height:100dvh}
 .top{display:flex;align-items:center;gap:8px}
 .top h1{font-size:1.1rem;margin:0;flex:1}
 .status{font:500 .8rem var(--mono);color:var(--muted)}
@@ -26,16 +28,17 @@ button{font:inherit;color:inherit}
 .hour{border:0;background:transparent;border-radius:7px;padding:8px 0;font:500 .9rem var(--mono);cursor:pointer}
 .hour small{font-size:.7rem;opacity:.65;margin-left:4px}
 .hour[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.map svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none}
+.map svg{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none}
 .floor{fill:var(--surface)}
 .room-hit{fill:transparent}
 .room-hit.ok{fill:rgba(46,134,84,.10)}
 .room-hit.no{fill:rgba(21,32,42,.06)}
+.room-hit.two{fill:rgba(176,69,54,.12)}
 .wall{stroke:var(--ink);stroke-width:4;fill:none;stroke-linecap:square}
 .doorgap{stroke:var(--surface);stroke-width:6}
 .door{stroke:var(--green);stroke-width:2;stroke-dasharray:3 3}
 .rname{font:700 11px var(--f);fill:var(--ink)}
-.wait{fill:#F5F7F8;stroke:var(--line);stroke-dasharray:4 3}
+.wait{fill:none;stroke:none}
 .wait-label{font:500 9px var(--mono);fill:var(--muted)}
 .tok rect{stroke-width:2}
 .tok text{font:700 10px var(--f);fill:#fff;pointer-events:none}
@@ -62,12 +65,22 @@ button{font:inherit;color:inherit}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .choice{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;cursor:pointer}
 .choice[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.plain{display:flex;flex-direction:column;gap:10px}
+.icon{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer;flex:none}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px max(10px,env(safe-area-inset-bottom));z-index:5}
+.bar .row{max-width:520px;margin:0 auto;flex-wrap:nowrap}
+.bar .btn{flex:1}
+.bar .btn.sec{flex:0 0 auto}
+.modal{position:fixed;inset:0;background:rgba(21,32,42,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--surface);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px max(16px,env(safe-area-inset-bottom));max-height:85dvh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.sheet h3{margin:6px 0 0;font-size:1rem}
+.sheet p{margin:0}
 .stats{font:500 .85rem var(--mono);color:var(--muted);white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div class="app" id="app">
-  <div class="top"><h1 id="title"></h1><span class="status" id="status"></span></div>
+  <div class="top"><h1 id="title"></h1><span class="status" id="status"></span><button class="icon" id="storyBtn" aria-label="The story and the rules" hidden>?</button></div>
   <div class="hours" id="hours"></div>
   <div class="map"><svg id="svg" viewBox="0 0 300 250" aria-label="Floor plan"></svg></div>
   <div class="msg" id="msg"></div>
@@ -77,14 +90,9 @@ button{font:inherit;color:inherit}
     <div class="row"><button class="btn" id="introNext">Next</button></div>
   </div>
 
-  <div class="panel" id="playPanel" hidden>
-    <div id="clues"></div>
-    <div class="row">
-      <button class="btn" id="nextClue">Show next clue</button>
-      <button class="btn sec" id="hintBtn">Hint</button>
-      <button class="btn sec" id="accuseBtn" hidden>Accuse</button>
-    </div>
+  <div class="plain" id="playPanel" hidden>
     <p class="hint" id="hint" hidden></p>
+    <div id="clues"></div>
   </div>
 
   <div class="panel" id="accusePanel" hidden>
@@ -100,6 +108,21 @@ button{font:inherit;color:inherit}
     <div class="row"><button class="btn" id="endNext">Next</button></div>
     <div class="stats" id="stats"></div>
     <div class="row"><button class="btn sec" id="copyBtn">Copy result</button></div>
+  </div>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="row">
+    <button class="btn" id="nextClue">Next clue</button>
+    <button class="btn sec" id="hintBtn">Hint</button>
+    <button class="btn sec" id="accuseBtn">Accuse</button>
+  </div>
+</div>
+
+<div class="modal" id="storyModal" hidden>
+  <div class="sheet" role="dialog" aria-label="The story and the rules">
+    <div id="storyBody"></div>
+    <button class="btn" id="storyClose">Back to the case</button>
   </div>
 </div>
 
@@ -131,7 +154,7 @@ const CASE = {
     {h:"Mrs. Bell is dead.",t:"The owner of the guesthouse died in the Office. The office clock fell and stopped at 21:00. Whoever was in the Office at 21:00 is the killer."},
     {h:"Four people were in the house.",t:"The guest, the waiter, the doctor and the nephew. Four people, four rooms: at every hour every room was taken, and nobody shared a room."},
     {h:"The map shows one moment at a time.",t:"At 20:00, at 21:00 and at 22:00, everyone stood in a room. Between two of these moments a person can walk through one door, or stay in the same room. The rooms go round in a ring: the Lounge and the Office have no door between them."},
-    {h:"Move people on the map.",t:"Drag a person into a room. Or tap the person, then tap the room. When you go to the next hour, everyone starts where they were, shown faded. Drag them on, or tap them twice to say they stayed."}
+    {h:"Move people on the map.",t:"Drag a person into a room. Or tap the person, then tap the room. When you go to the next hour, everyone starts faded where they stood the hour before. Drag them on, or tap them twice to say they stayed. Tap the ? at the top to read this again."}
   ],
   clues:[
     {lead:"There is fresh coffee in the Kitchen.",text:"At 20:00 the waiter was in the Kitchen.",hint:"Drag the Waiter into the Kitchen at 20:00.",marker:"Kit",c:{type:"at",p:"B",r:"Kit",t:0}},
@@ -190,7 +213,8 @@ function view(t){ // hva som vises i time t: faste brikker og skygger ført vide
   const byRoom = {};
   for (const p of P){
     let r = solid[p], ghost = false;
-    if (!r && !done){ for (let k=t-1;k>=0;k--) if (place[k][p]){ r=place[k][p]; ghost=true; break; } }
+    // dempet brikke: bare fra timen rett før, og bare hvis den passer med timen etter
+    if (!r && !done && t>0 && place[t-1][p]){ const g=place[t-1][p], nx=t+1<T?place[t+1][p]:null; if (!nx || ADJ[g].has(nx)){ r=g; ghost=true; } }
     if (r){ (byRoom[r] ||= []).push({p,ghost}); } else items.push({p,wait:true});
   }
   for (const r in byRoom){ const list = byRoom[r].sort((a,b)=>a.ghost-b.ghost); list.forEach((it,i)=>items.push({...it,room:r,pos:slotPos(r,i,list.length)})); }
@@ -213,7 +237,8 @@ function draw(live){
     el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,class:"floor"},svg);
   }
   for (const r of CASE.rooms){
-    const cls = okRooms ? (okRooms.has(r.id)?"room-hit ok":"room-hit no") : "room-hit";
+    const two = !done && P.filter(q=>place[hour][q]===r.id).length>1;
+    const cls = okRooms ? (okRooms.has(r.id)?"room-hit ok":"room-hit no") : (two?"room-hit two":"room-hit");
     el("rect",{x:r.x+2,y:r.y+2,width:r.w-4,height:r.h-4,class:cls,"data-room":r.id},svg);
     el("rect",{x:r.x+2,y:r.y+2,width:r.w-4,height:r.h-4,class:"wall"},svg);
     const tx=el("text",{x:r.x+9,y:r.y+17,class:"rname"},svg); tx.textContent=r.name;
@@ -266,18 +291,14 @@ function setRoom(p,room,how){
   const t=hour, prev=place[t][p] || null;
   if (room===null){ delete place[t][p]; stats.undoToWaiting++; after(); return; }
   if (!allowed(p,t).has(room)){ stats.rejected++; say(SUS[p].label+": "+"between two hours a person can only walk through one door.",true); draw(); return; }
+  // ingen automatisk bytting: to i samme rom er lov på brettet, men rommet markeres
   const other = P.find(q=>q!==p && place[t][q]===room);
-  if (other){
-    // bytt plass: den andre går dit p sto (eller til venteområdet)
-    if (prev && !allowed(other,t).has(prev)){ stats.rejected++; say("Nobody shared a room, and the "+SUS[other].label.toLowerCase()+" cannot reach the "+ROOM[prev].name+".",true); draw(); return; }
-    if (prev) place[t][other]=prev; else delete place[t][other];
-  }
   const wasGhost = !place[t][p];
   place[t][p]=room;
   const prevHourRoom = t>0 ? place[t-1][p] : null;
   if (prevHourRoom===room && wasGhost && how!=="drag-stay") stats.stay++;
   if (how==="drag") stats.drag++; else if (how==="tap") stats.tap++;
-  say(other ? SUS[p].label+" and "+SUS[other].label+" swapped rooms on your board." : "");
+  say(other ? "Two people in the "+ROOM[room].name+". Nobody shared a room, so one of them must move." : "", !!other);
   after();
 }
 
@@ -340,30 +361,39 @@ function renderClues(){
     const d=document.createElement("div"); d.className="clue"+(i===shown-1?" new":"")+(breaks(c.c)?" bad":"");
     d.innerHTML=`<div class="lead">${i+1}. ${c.lead}</div><div class="text">${c.text}</div>`; box.prepend(d);
   });
-  $("nextClue").hidden = shown>=CASE.clues.length;
-  $("accuseBtn").hidden = shown<CASE.clues.length;
+  const all = shown>=CASE.clues.length;
+  $("nextClue").hidden = all;
+  $("nextClue").textContent = `Next clue (${shown+1} of ${CASE.clues.length})`;
+  $("accuseBtn").className = all ? "btn" : "btn sec";
+  $("accuseBtn").textContent = all ? "Make your accusation" : "Accuse";
   $("hint").hidden=true;
-  $("status").textContent = `Clue ${shown}/${CASE.clues.length} · ${3-attempts} tries left`;
+  $("status").textContent = `Clue ${shown}/${CASE.clues.length}`;
+  updateBar();
 }
+function updateBar(){ const play=!$("playPanel").hidden; $("bar").hidden=!play; $("storyBtn").hidden=$("introPanel").hidden===false; }
+function showStory(){ const b=$("storyBody"); b.innerHTML=""; CASE.intro.forEach(s=>{ const h=document.createElement("h3"); h.textContent=s.h; const p=document.createElement("p"); p.textContent=s.t; b.append(h,p); }); $("storyModal").hidden=false; }
+$("storyBtn").onclick=showStory;
+$("storyClose").onclick=()=>{ $("storyModal").hidden=true; };
+$("storyModal").addEventListener("click",e=>{ if (e.target.id==="storyModal") $("storyModal").hidden=true; });
 $("nextClue").onclick=()=>{ begin(); shown++; renderClues(); draw(); };
 $("hintBtn").onclick=()=>{ const c=CASE.clues[shown-1]; if(!c) return; stats.hints++; $("hint").textContent=c.hint; $("hint").hidden=false; };
 
 // ---------- intro ----------
 function showIntro(){ const s=CASE.intro[introStep]; $("introH").textContent=s.h; $("introT").textContent=s.t; $("introNext").textContent = introStep===CASE.intro.length-1?"Start":"Next"; }
-$("introNext").onclick=()=>{ introStep++; if (introStep<CASE.intro.length) return showIntro(); $("introPanel").hidden=true; $("playPanel").hidden=false; shown=1; begin(); renderClues(); draw(); };
+$("introNext").onclick=()=>{ introStep++; if (introStep<CASE.intro.length) return showIntro(); $("introPanel").hidden=true; $("playPanel").hidden=false; shown=1; begin(); renderClues(); draw(); say("Drag a person into a room, or tap the person and then the room."); };
 
 // ---------- anklage ----------
 let accWho=null, accWhere=null;
 function choices(box,list,get,setv){ box.innerHTML=""; list.forEach(([id,label])=>{ const b=document.createElement("button"); b.className="choice"; b.textContent=label; b.setAttribute("aria-pressed",get()===id); b.onclick=()=>{ setv(id); choices(box,list,get,setv); }; box.appendChild(b); }); }
 $("accuseBtn").onclick=()=>{
-  $("playPanel").hidden=true; $("accusePanel").hidden=false;
+  $("playPanel").hidden=true; $("accusePanel").hidden=false; updateBar();
   $("accQ1").textContent=`Who was in the ${ROOM[CASE.murder.room].name} at ${CASE.times[CASE.murder.time]}?`;
   $("accQ2").textContent=`Where was the ${SUS[CASE.control.p].label.toLowerCase()} at ${CASE.times[CASE.control.t]}?`;
   choices($("accWho"),CASE.suspects.map(s=>[s.id,s.label]),()=>accWho,v=>accWho=v);
   choices($("accWhere"),CASE.rooms.map(r=>[r.id,r.name]),()=>accWhere,v=>accWhere=v);
   $("accMsg").textContent=`${3-attempts} tries left.`;
 };
-$("accBack").onclick=()=>{ $("accusePanel").hidden=true; $("playPanel").hidden=false; };
+$("accBack").onclick=()=>{ $("accusePanel").hidden=true; $("playPanel").hidden=false; updateBar(); };
 $("accGo").onclick=()=>{
   if (!accWho||!accWhere){ $("accMsg").textContent="Choose a person and a room."; return; }
   attempts++;
@@ -377,7 +407,7 @@ $("accGo").onclick=()=>{
 function finish(ok){
   bank(); since=null; done=true; if(!stats.end) stats.end=Date.now(); stats.solved=ok;
   place = CASE.times.map((_,t)=>Object.fromEntries(P.map(p=>[p,CASE.solution[p][t]])));
-  $("accusePanel").hidden=true; $("endPanel").hidden=false;
+  $("accusePanel").hidden=true; $("playPanel").hidden=true; $("endPanel").hidden=false; updateBar();
   $("verdict").textContent = ok ? "Case closed." : "Case unsolved.";
   endStep=-1; $("endText").textContent = ok ? "You found the killer. See what happened." : "Here is what happened.";
   $("endNext").hidden=false; showStats(); save();
@@ -396,7 +426,7 @@ function showStats(){ $("stats").textContent=resultText(); }
 $("copyBtn").onclick=()=>{ const t=resultText(); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$("copyBtn").textContent="Copied").catch(()=>{ $("stats").textContent=t; }); };
 
 // ---------- lagring per nettleser (bekvemmelighet) ----------
-const KEY="proto-drag-"+CASE.id;
+const KEY="proto-drag-v2-"+CASE.id;
 function save(){ bank(); try{ localStorage.setItem(KEY,JSON.stringify({place,shown,attempts,stats,done})); }catch(e){} }
 function load(){
   if (location.search.includes("reset")) { try{localStorage.removeItem(KEY)}catch(e){} return; }
@@ -407,6 +437,7 @@ function load(){
 $("title").textContent=CASE.title;
 if (!load()){ renderHours(); showIntro(); renderClues(); draw(); }
 else { renderHours(); if (!done) renderClues(); draw(); }
+updateBar();
 run();
 </script>
 </body>
